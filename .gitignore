@@ -49,3 +49,5 @@ app.*.map.json
 /windows
 /ios
 /android
+/web
+.vscode
