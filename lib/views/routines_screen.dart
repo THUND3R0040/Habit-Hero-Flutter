@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../viewmodels/routines_viewmodel.dart';
-import '../widgets/habit_card.dart';
+import '../widgets/routine_card.dart';
+import '../widgets/add_routine_dialog.dart';
+import '../widgets/edit_routine_dialog.dart';
 
 class RoutinesScreen extends ConsumerStatefulWidget {
   const RoutinesScreen({super.key});
@@ -11,95 +13,72 @@ class RoutinesScreen extends ConsumerStatefulWidget {
 }
 
 class _RoutinesScreenState extends ConsumerState<RoutinesScreen> {
-  final _routineNameController = TextEditingController();
-
-  @override
-  void dispose() {
-    _routineNameController.dispose();
-    super.dispose();
-  }
-
-  void _showCreateRoutineDialog() {
+  void _showAddDialog() {
     showDialog(
       context: context,
+      barrierDismissible: false,
+      builder: (context) => const AddRoutineDialog(),
+    );
+  }
+
+  void _showEditDialog(String routineId) {
+    final state = ref.read(routinesViewModelProvider);
+    final routineWithHabits = state.routines.firstWhere(
+      (r) => r.routine.id == routineId,
+    );
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => EditRoutineDialog(routine: routineWithHabits.routine),
+    );
+  }
+
+  Future<void> _deleteRoutine(String id, String name) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Create Routine'),
-        content: TextField(
-          controller: _routineNameController,
-          decoration: const InputDecoration(
-            labelText: 'Routine Name',
-            border: OutlineInputBorder(),
-          ),
-        ),
+        title: const Text('Delete Routine'),
+        content: Text('Are you sure you want to delete "$name"?'),
         actions: [
           TextButton(
-            onPressed: () {
-              _routineNameController.clear();
-              Navigator.of(context).pop();
-            },
+            onPressed: () => Navigator.of(context).pop(false),
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () async {
-              final name = _routineNameController.text.trim();
-              if (name.isNotEmpty) {
-                _routineNameController.clear();
-                Navigator.of(context).pop();
-                await ref
-                    .read(routinesViewModelProvider.notifier)
-                    .createRoutine(name: name);
-              }
-            },
-            child: const Text('Create'),
+            onPressed: () => Navigator.of(context).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            child: const Text('Delete'),
           ),
         ],
       ),
     );
+
+    if (confirmed == true && mounted) {
+      try {
+        await ref.read(routinesViewModelProvider.notifier).deleteRoutine(id);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to delete routine: $e')),
+          );
+        }
+      }
+    }
   }
 
-  void _showAddHabitDialog(String routineId) {
-    final state = ref.read(routinesViewModelProvider);
-    final availableHabits = state.allHabits.where((habit) {
-      return !state.routines.any((routine) =>
-          routine.routine.id == routineId &&
-          routine.habits.any((h) => h.id == habit.id));
-    }).toList();
-
-    if (availableHabits.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No available habits to add')),
-      );
-      return;
+  Future<void> _toggleActiveRoutine(String id) async {
+    try {
+      await ref.read(routinesViewModelProvider.notifier).toggleActiveRoutine(id);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to toggle routine: $e')),
+        );
+      }
     }
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add Habit to Routine'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: ListView.builder(
-            shrinkWrap: true,
-            itemCount: availableHabits.length,
-            itemBuilder: (context, index) {
-              final habit = availableHabits[index];
-              return ListTile(
-                title: Text(habit.name),
-                onTap: () async {
-                  Navigator.of(context).pop();
-                  await ref
-                      .read(routinesViewModelProvider.notifier)
-                      .addHabitToRoutine(
-                        routineId: routineId,
-                        habitId: habit.id,
-                      );
-                },
-              );
-            },
-          ),
-        ),
-      ),
-    );
   }
 
   @override
@@ -121,6 +100,7 @@ class _RoutinesScreenState extends ConsumerState<RoutinesScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text('Error: ${state.error}'),
+              const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () => viewModel.loadRoutines(),
                 child: const Text('Retry'),
@@ -132,100 +112,98 @@ class _RoutinesScreenState extends ConsumerState<RoutinesScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Routines'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: _showCreateRoutineDialog,
-          ),
-        ],
-      ),
-      body: state.routines.isEmpty
-          ? const Center(
-              child: Text('No routines yet. Create your first routine!'),
-            )
-          : RefreshIndicator(
-              onRefresh: () => viewModel.loadRoutines(),
-              child: ListView.builder(
-                itemCount: state.routines.length,
-                itemBuilder: (context, index) {
-                  final routineWithHabits = state.routines[index];
-                  return Card(
-                    margin: const EdgeInsets.all(16),
-                    child: ExpansionTile(
-                      leading: Switch(
-                        value: routineWithHabits.routine.active,
-                        onChanged: (value) async {
-                          await viewModel.updateRoutine(
-                            id: routineWithHabits.routine.id,
-                            active: value,
-                          );
-                        },
-                      ),
-                      title: Text(routineWithHabits.routine.name),
-                      subtitle: Text(
-                          '${routineWithHabits.habits.length} habits'),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.delete),
-                        onPressed: () {
-                          showDialog(
-                            context: context,
-                            builder: (context) => AlertDialog(
-                              title: const Text('Delete Routine'),
-                              content: Text(
-                                  'Are you sure you want to delete "${routineWithHabits.routine.name}"?'),
-                              actions: [
-                                TextButton(
-                                  onPressed: () =>
-                                      Navigator.of(context).pop(),
-                                  child: const Text('Cancel'),
-                                ),
-                                FilledButton(
-                                  onPressed: () async {
-                                    Navigator.of(context).pop();
-                                    await viewModel.deleteRoutine(
-                                        routineWithHabits.routine.id);
-                                  },
-                                  style: FilledButton.styleFrom(
-                                    backgroundColor: Colors.red,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Text(
+                'Routine Builder',
+                style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Group habits into focused routines',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+              ),
+              const SizedBox(height: 32),
+
+              // Routines Grid
+              Expanded(
+                child: state.routines.isEmpty
+                    ? const Center(
+                        child: Text(
+                          'No routines yet. Create your first routine!',
+                          style: TextStyle(fontSize: 16),
+                        ),
+                      )
+                    : LayoutBuilder(
+                        builder: (context, constraints) {
+                          int crossAxisCount = 1;
+                          if (constraints.maxWidth > 1024) {
+                            crossAxisCount = 3;
+                          } else if (constraints.maxWidth > 768) {
+                            crossAxisCount = 2;
+                          }
+
+                          return RefreshIndicator(
+                            onRefresh: () => viewModel.loadRoutines(),
+                            child: GridView.builder(
+                              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: crossAxisCount,
+                                crossAxisSpacing: 16,
+                                mainAxisSpacing: 16,
+                                childAspectRatio: 1.3,
+                              ),
+                              itemCount: state.routines.length,
+                              itemBuilder: (context, index) {
+                                final routineWithHabits = state.routines[index];
+                                final routine = routineWithHabits.routine;
+                                
+                                return RoutineCard(
+                                  routine: routine,
+                                  onDelete: () => _deleteRoutine(
+                                    routine.id,
+                                    routine.name,
                                   ),
-                                  child: const Text('Delete'),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                      children: [
-                        ...routineWithHabits.habits.map((habit) {
-                          return ListTile(
-                            leading: const Icon(Icons.drag_handle),
-                            title: Text(habit.name),
-                            trailing: IconButton(
-                              icon: const Icon(Icons.remove_circle),
-                              onPressed: () async {
-                                await viewModel.removeHabitFromRoutine(
-                                  routineId: routineWithHabits.routine.id,
-                                  habitId: habit.id,
+                                  onEdit: () => _showEditDialog(routine.id),
+                                  onToggleActive: () => _toggleActiveRoutine(routine.id),
                                 );
                               },
                             ),
                           );
-                        }),
-                        ListTile(
-                          leading: const Icon(Icons.add),
-                          title: const Text('Add Habit'),
-                          onTap: () =>
-                              _showAddHabitDialog(routineWithHabits.routine.id),
-                        ),
-                      ],
-                    ),
-                  );
-                },
+                        },
+                      ),
               ),
-            ),
+
+              const SizedBox(height: 24),
+
+              // Create Button
+              FilledButton.icon(
+                onPressed: _showAddDialog,
+                icon: const Text('➕', style: TextStyle(fontSize: 16)),
+                label: const Text('Create Routine'),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 16,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
-

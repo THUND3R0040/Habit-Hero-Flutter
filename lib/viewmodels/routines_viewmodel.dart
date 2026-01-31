@@ -94,18 +94,39 @@ class RoutinesViewModel extends StateNotifier<RoutinesState> {
     }
   }
 
-  Future<void> createRoutine({
-    required String name,
-    bool active = true,
+  // UPDATE this method to use RoutineFormData
+Future<void> createRoutine(RoutineFormData formData) async {
+  try {
+    await _routineService.createRoutine(
+      name: formData.name,
+      description: formData.description,
+      type: formData.type,
+      customTimeText: formData.customTimeText,
+      active: true,
+    );
+    await loadRoutines();
+  } catch (e) {
+    state = state.copyWith(error: e.toString());
+  }
+}
+
+  // UPDATE this method to use RoutineFormData
+  Future<void> updateRoutineFromForm({
+    required String id,
+    required RoutineFormData formData,
   }) async {
     try {
-      await _routineService.createRoutine(name: name, active: active);
+      await _routineService.updateRoutineFromForm(
+        id: id,
+        formData: formData,
+      );
       await loadRoutines();
     } catch (e) {
       state = state.copyWith(error: e.toString());
     }
   }
 
+  // KEEP existing updateRoutine for backward compatibility
   Future<void> updateRoutine({
     required String id,
     String? name,
@@ -113,6 +134,16 @@ class RoutinesViewModel extends StateNotifier<RoutinesState> {
   }) async {
     try {
       await _routineService.updateRoutine(id: id, name: name, active: active);
+      await loadRoutines();
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+    }
+  }
+
+  // ADD this new method
+  Future<void> toggleActiveRoutine(String id) async {
+    try {
+      await _routineService.toggleActive(id);
       await loadRoutines();
     } catch (e) {
       state = state.copyWith(error: e.toString());
@@ -162,8 +193,6 @@ class RoutinesViewModel extends StateNotifier<RoutinesState> {
     required String routineId,
     required List<String> habitIds,
   }) async {
-    // Note: Reordering is not supported without a position column
-    // This method is kept for API compatibility but does nothing
     await loadRoutines();
   }
 }
@@ -175,4 +204,3 @@ final routinesViewModelProvider =
     ref.watch(habitServiceProvider),
   );
 });
-
