@@ -6,7 +6,7 @@ import '../viewmodels/routines_viewmodel.dart';
 class DragDropHabitItem extends ConsumerWidget {
   final Habit habit;
   final bool isInRoutine;
-  final String? routineId; // For removing from routine
+  final String? routineId; // The routine this habit belongs to (if any)
 
   const DragDropHabitItem({
     super.key,
@@ -25,7 +25,10 @@ class DragDropHabitItem extends ConsumerWidget {
 
   IconData _getIconFromString(String iconString) {
     try {
-      return IconData(int.parse(iconString), fontFamily: 'MaterialIcons');
+      return IconData(
+        int.parse(iconString),
+        fontFamily: 'MaterialIcons',
+      );
     } catch (e) {
       return Icons.check_circle;
     }
@@ -50,7 +53,11 @@ class DragDropHabitItem extends ConsumerWidget {
         child: _buildHabitCard(context, color, icon),
       ),
       onDragStarted: () {
-        ref.read(routinesViewModelProvider.notifier).startDragging(habit.id);
+        // Pass the source routine ID when starting drag
+        ref.read(routinesViewModelProvider.notifier).startDragging(
+          habit.id,
+          sourceRoutineId: routineId, // This tells us where it came from
+        );
       },
       onDragEnd: (details) {
         ref.read(routinesViewModelProvider.notifier).stopDragging();
@@ -84,7 +91,7 @@ class DragDropHabitItem extends ConsumerWidget {
                 size: 20,
               ),
             ),
-
+            
             Container(
               width: 48,
               height: 48,
@@ -92,38 +99,33 @@ class DragDropHabitItem extends ConsumerWidget {
                 color: color.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: color, size: 24),
-            ),
-            const SizedBox(width: 16),
-            // In the _buildHabitCard method, wrap the Column with ConstrainedBox:
-            Expanded(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(
-                  minWidth: 0, // Allow shrinking
-                  maxWidth: double.infinity, // Allow expanding
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      habit.name,
-                      style: Theme.of(context).textTheme.titleMedium,
-                      maxLines: 2, // Limit to 2 lines
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (habit.description != null &&
-                        habit.description!.isNotEmpty)
-                      Text(
-                        habit.description!,
-                        style: Theme.of(context).textTheme.bodySmall,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                  ],
-                ),
+              child: Icon(
+                icon,
+                color: color,
+                size: 24,
               ),
             ),
-
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    habit.name,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  if (habit.description != null &&
+                      habit.description!.isNotEmpty)
+                    Text(
+                      habit.description!,
+                      style: Theme.of(context).textTheme.bodySmall,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                ],
+              ),
+            ),
+            
             // Remove button for habits in routines
             if (isInRoutine && routineId != null)
               IconButton(
@@ -165,8 +167,9 @@ class DragDropHabitItem extends ConsumerWidget {
 
   void _performRemove(BuildContext context, String routineId) {
     final ref = ProviderScope.containerOf(context);
-    ref
-        .read(routinesViewModelProvider.notifier)
-        .removeHabitFromRoutine(routineId: routineId, habitId: habit.id);
+    ref.read(routinesViewModelProvider.notifier).removeHabitFromRoutine(
+      routineId: routineId,
+      habitId: habit.id,
+    );
   }
 }

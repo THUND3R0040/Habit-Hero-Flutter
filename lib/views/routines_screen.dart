@@ -116,23 +116,24 @@ class _RoutinesScreenState extends ConsumerState<RoutinesScreen> {
       backgroundColor: Theme.of(context).colorScheme.background,
       body: SafeArea(
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header - Fixed height
-            Container(
-              padding: const EdgeInsets.all(16),
+            // Header
+            Padding(
+              padding: const EdgeInsets.all(32.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     'Routine Builder',
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    style: Theme.of(context).textTheme.displaySmall?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 8),
                   Text(
                     'Long press habits to drag them into routines',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                   ),
@@ -140,54 +141,80 @@ class _RoutinesScreenState extends ConsumerState<RoutinesScreen> {
               ),
             ),
 
-            // Available Habits Section - Limited height
+            // Available Habits Section
             if (state.unassignedHabits.isNotEmpty)
-              Container(
-                height: 180, // Fixed height to prevent overflow
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+              Expanded(
+                flex: 1,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 32),
                       child: Text(
-                        'Available Habits (${state.unassignedHabits.length})',
+                        'Available Habits (Long press to drag)',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                               fontWeight: FontWeight.bold,
                             ),
                       ),
                     ),
-                    Expanded(
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: state.unassignedHabits.length,
-                        itemBuilder: (context, index) {
-                          final habit = state.unassignedHabits[index];
-                          return SizedBox(
-                            width: 300, // Fixed width
-                            child: Padding(
-                              padding: const EdgeInsets.only(right: 8),
-                              child: DragDropHabitItem(
-                                habit: habit,
-                                isInRoutine: false,
-                              ),
+                    const SizedBox(height: 8),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 32),
+                      child: Text(
+                        '${state.unassignedHabits.length} habits available',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
                             ),
-                          );
-                        },
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: ListView.builder(
+                          itemCount: state.unassignedHabits.length,
+                          itemBuilder: (context, index) {
+                            final habit = state.unassignedHabits[index];
+                            return DragDropHabitItem(
+                              habit: habit,
+                              isInRoutine: false,
+                            );
+                          },
+                        ),
                       ),
                     ),
                   ],
                 ),
+              )
+            else if (state.routines.isEmpty)
+              Expanded(
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.list_alt,
+                        size: 64,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No habits available. Create habits first!',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
 
-            // Divider
-            if (state.unassignedHabits.isNotEmpty && state.routines.isNotEmpty)
-              const Divider(height: 32, thickness: 1),
-
-            // Routines Section - Takes remaining space
+            // Routines Grid
             Expanded(
+              flex: 2,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
                 child: state.routines.isEmpty
                     ? Center(
                         child: Column(
@@ -200,29 +227,24 @@ class _RoutinesScreenState extends ConsumerState<RoutinesScreen> {
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              'No routines yet',
+                              'No routines yet. Create your first routine!',
                               style: TextStyle(
                                 fontSize: 16,
                                 color: Theme.of(context).colorScheme.onSurfaceVariant,
                               ),
                             ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Create a routine to start organizing habits',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.7),
-                              ),
-                            ),
                             const SizedBox(height: 24),
                             FilledButton.icon(
                               onPressed: _showAddDialog,
-                              icon: const Icon(Icons.add, size: 16),
+                              icon: const Text('➕', style: TextStyle(fontSize: 16)),
                               label: const Text('Create Routine'),
                               style: FilledButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                  vertical: 12,
+                                  horizontal: 24,
+                                  vertical: 16,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
                             ),
@@ -235,7 +257,7 @@ class _RoutinesScreenState extends ConsumerState<RoutinesScreen> {
                           Padding(
                             padding: const EdgeInsets.only(bottom: 16),
                             child: Text(
-                              'Your Routines (${state.routines.length})',
+                              'Your Routines (Drop habits here)',
                               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -247,9 +269,9 @@ class _RoutinesScreenState extends ConsumerState<RoutinesScreen> {
                               child: GridView.builder(
                                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                                   crossAxisCount: 2,
-                                  crossAxisSpacing: 12,
-                                  mainAxisSpacing: 12,
-                                  childAspectRatio: 1.3,
+                                  crossAxisSpacing: 16,
+                                  mainAxisSpacing: 16,
+                                  childAspectRatio: 1.5,
                                 ),
                                 itemCount: state.routines.length,
                                 itemBuilder: (context, index) {
@@ -275,16 +297,22 @@ class _RoutinesScreenState extends ConsumerState<RoutinesScreen> {
               ),
             ),
 
-            // Create Button - Fixed at bottom
+            // Create Button (only shown when there are routines)
             if (state.routines.isNotEmpty)
-              Container(
-                padding: const EdgeInsets.all(16),
+              Padding(
+                padding: const EdgeInsets.all(32.0),
                 child: FilledButton.icon(
                   onPressed: _showAddDialog,
-                  icon: const Icon(Icons.add, size: 16),
+                  icon: const Text('➕', style: TextStyle(fontSize: 16)),
                   label: const Text('Create Routine'),
                   style: FilledButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 48),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 16,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
               ),

@@ -81,7 +81,9 @@ class _RoutineCardState extends State<RoutineCard> {
                       color: Theme.of(context).colorScheme.surface,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.outline.withOpacity(0.2),
                       ),
                     ),
                     child: Column(
@@ -118,8 +120,8 @@ class _RoutineCardState extends State<RoutineCard> {
   }
 
   String _getRoutineTypeDisplay() {
-    if (widget.routine.type == RoutineType.custom && 
-        widget.routine.customTimeText != null && 
+    if (widget.routine.type == RoutineType.custom &&
+        widget.routine.customTimeText != null &&
         widget.routine.customTimeText!.isNotEmpty) {
       return widget.routine.customTimeText!;
     }
@@ -135,33 +137,45 @@ class _RoutineCardState extends State<RoutineCard> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Consumer(
       builder: (context, ref, child) {
         final state = ref.watch(routinesViewModelProvider);
-        final isDragTarget = state.routineDragTargets[widget.routine.id] ?? false;
-        
+        final isDragTarget =
+            state.routineDragTargets[widget.routine.id] ?? false;
+
         return DragTarget<String>(
           onAccept: (habitId) {
-            // Add habit to routine
-            ref.read(routinesViewModelProvider.notifier).addHabitToRoutine(
-              routineId: widget.routine.id,
-              habitId: habitId,
-            );
+            // Use transfer method instead of add method
+            ref
+                .read(routinesViewModelProvider.notifier)
+                .transferHabitToRoutine(
+                  targetRoutineId: widget.routine.id,
+                  habitId: habitId,
+                );
             setState(() => _isDragOver = false);
           },
-          onWillAccept: (data) {
-            // Check if habit is already in this routine
-            final isAlreadyInRoutine = widget.habits.any((h) => h.id == data);
-            return !isAlreadyInRoutine;
-          },
+         onWillAcceptWithDetails: (data) {
+  // Check if habit is already in this routine
+  // ignore: unrelated_type_equality_checks
+  final isAlreadyInRoutine = widget.habits.any((h) => h.id == data);
+  // Also check if we're trying to drop on the same routine it came from
+  final state = ref.read(routinesViewModelProvider);
+  final isSameRoutine = state.sourceRoutineId == widget.routine.id;
+  
+  return !isAlreadyInRoutine && !isSameRoutine;
+},
           onLeave: (data) {
             setState(() => _isDragOver = false);
-            ref.read(routinesViewModelProvider.notifier).setDragTarget(widget.routine.id, false);
+            ref
+                .read(routinesViewModelProvider.notifier)
+                .setDragTarget(widget.routine.id, false);
           },
           onMove: (details) {
             setState(() => _isDragOver = true);
-            ref.read(routinesViewModelProvider.notifier).setDragTarget(widget.routine.id, true);
+            ref
+                .read(routinesViewModelProvider.notifier)
+                .setDragTarget(widget.routine.id, true);
           },
           builder: (context, candidateData, rejectedData) {
             return CompositedTransformTarget(
@@ -171,9 +185,11 @@ class _RoutineCardState extends State<RoutineCard> {
                 decoration: BoxDecoration(
                   color: _isDragOver || isDragTarget
                       ? theme.colorScheme.primaryContainer.withOpacity(0.3)
-                      : widget.routine.active 
-                          ? theme.colorScheme.surface
-                          : theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                      : widget.routine.active
+                      ? theme.colorScheme.surface
+                      : theme.colorScheme.surfaceContainerHighest.withOpacity(
+                          0.3,
+                        ),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: _isDragOver || isDragTarget
@@ -208,9 +224,8 @@ class _RoutineCardState extends State<RoutineCard> {
                                 children: [
                                   Text(
                                     widget.routine.name,
-                                    style: theme.textTheme.headlineSmall?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                    style: theme.textTheme.headlineSmall
+                                        ?.copyWith(fontWeight: FontWeight.bold),
                                   ),
                                   const SizedBox(height: 12),
                                   Text(
@@ -262,17 +277,21 @@ class _RoutineCardState extends State<RoutineCard> {
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              
+
                               if (widget.habits.isEmpty)
                                 Expanded(
                                   child: Center(
                                     child: Container(
                                       padding: const EdgeInsets.all(20),
                                       decoration: BoxDecoration(
-                                        color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                                        color: theme
+                                            .colorScheme
+                                            .surfaceContainerHighest
+                                            .withOpacity(0.3),
                                         borderRadius: BorderRadius.circular(12),
                                         border: Border.all(
-                                          color: theme.colorScheme.outline.withOpacity(0.1),
+                                          color: theme.colorScheme.outline
+                                              .withOpacity(0.1),
                                           // Use a different visual cue instead of dashed border
                                         ),
                                       ),
@@ -282,21 +301,30 @@ class _RoutineCardState extends State<RoutineCard> {
                                           Icon(
                                             Icons.drag_indicator,
                                             size: 40,
-                                            color: theme.colorScheme.onSurfaceVariant,
+                                            color: theme
+                                                .colorScheme
+                                                .onSurfaceVariant,
                                           ),
                                           const SizedBox(height: 8),
                                           Text(
                                             'Drag habits here',
-                                            style: theme.textTheme.bodyMedium?.copyWith(
-                                              color: theme.colorScheme.onSurfaceVariant,
-                                            ),
+                                            style: theme.textTheme.bodyMedium
+                                                ?.copyWith(
+                                                  color: theme
+                                                      .colorScheme
+                                                      .onSurfaceVariant,
+                                                ),
                                           ),
                                           const SizedBox(height: 4),
                                           Text(
                                             'Drop zone',
-                                            style: theme.textTheme.bodySmall?.copyWith(
-                                              color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
-                                            ),
+                                            style: theme.textTheme.bodySmall
+                                                ?.copyWith(
+                                                  color: theme
+                                                      .colorScheme
+                                                      .onSurfaceVariant
+                                                      .withOpacity(0.7),
+                                                ),
                                           ),
                                         ],
                                       ),
@@ -308,7 +336,8 @@ class _RoutineCardState extends State<RoutineCard> {
                                   child: ListView.separated(
                                     shrinkWrap: true,
                                     itemCount: widget.habits.length,
-                                    separatorBuilder: (context, index) => const SizedBox(height: 8),
+                                    separatorBuilder: (context, index) =>
+                                        const SizedBox(height: 8),
                                     itemBuilder: (context, index) {
                                       final habit = widget.habits[index];
                                       return DragDropHabitItem(
@@ -339,10 +368,7 @@ class _ActiveToggle extends StatelessWidget {
   final bool isActive;
   final VoidCallback onToggle;
 
-  const _ActiveToggle({
-    required this.isActive,
-    required this.onToggle,
-  });
+  const _ActiveToggle({required this.isActive, required this.onToggle});
 
   @override
   Widget build(BuildContext context) {
@@ -360,7 +386,9 @@ class _ActiveToggle extends StatelessWidget {
             ),
             child: AnimatedAlign(
               duration: const Duration(milliseconds: 200),
-              alignment: isActive ? Alignment.centerRight : Alignment.centerLeft,
+              alignment: isActive
+                  ? Alignment.centerRight
+                  : Alignment.centerLeft,
               child: Container(
                 width: 16,
                 height: 16,
@@ -419,7 +447,7 @@ class _MenuButtonState extends State<_MenuButton> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
@@ -429,9 +457,9 @@ class _MenuButtonState extends State<_MenuButton> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
             color: _isHovered
-                ? (widget.isDestructive 
-                    ? Colors.red.shade50 
-                    : theme.colorScheme.surfaceContainerHighest)
+                ? (widget.isDestructive
+                      ? Colors.red.shade50
+                      : theme.colorScheme.surfaceContainerHighest)
                 : Colors.transparent,
             borderRadius: widget.isLast
                 ? const BorderRadius.only(
@@ -442,18 +470,15 @@ class _MenuButtonState extends State<_MenuButton> {
           ),
           child: Row(
             children: [
-              Text(
-                widget.icon,
-                style: const TextStyle(fontSize: 18),
-              ),
+              Text(widget.icon, style: const TextStyle(fontSize: 18)),
               const SizedBox(width: 12),
               Text(
                 widget.label,
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
-                  color: widget.isDestructive 
-                      ? Colors.red.shade600 
+                  color: widget.isDestructive
+                      ? Colors.red.shade600
                       : theme.colorScheme.onSurface,
                 ),
               ),
