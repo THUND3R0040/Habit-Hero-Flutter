@@ -12,18 +12,37 @@ class AuthScreen extends ConsumerStatefulWidget {
   ConsumerState<AuthScreen> createState() => _AuthScreenState();
 }
 
-class _AuthScreenState extends ConsumerState<AuthScreen> {
+class _AuthScreenState extends ConsumerState<AuthScreen>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+
   bool _isLoading = false;
   bool _isSignUp = false;
+  bool _obscurePassword = true;
   String? _errorMessage;
+
+  late AnimationController _fadeController;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _fadeController =
+        AnimationController(vsync: this, duration: const Duration(milliseconds: 800));
+    _fadeAnimation = CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeOut,
+    );
+    _fadeController.forward();
+  }
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _fadeController.dispose();
     super.dispose();
   }
 
@@ -43,61 +62,41 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       AuthResponse response;
       if (_isSignUp) {
         response = await authService.signUp(email: email, password: password);
-        
-        // Check if email confirmation is required
+
         if (response.user != null && response.session == null) {
-          setState(() {
-            _errorMessage = null;
-            _isLoading = false;
-          });
-          
+          setState(() => _isLoading = false);
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text(
                   'Account created! Please check your email to confirm your account.',
                 ),
-                backgroundColor: Colors.green,
-                duration: Duration(seconds: 5),
               ),
             );
           }
-          return; // Don't navigate, wait for email confirmation
+          return;
         }
       } else {
         response = await authService.signIn(email: email, password: password);
       }
 
-      // Check for errors in response
       if (response.user == null) {
         throw Exception('Authentication failed. Please try again.');
       }
 
+      await Future.delayed(const Duration(milliseconds: 500));
       if (mounted) {
-        // Wait a bit for auth state to update
-        await Future.delayed(const Duration(milliseconds: 500));
-        if (mounted) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const MainNavigation()),
-          );
-        }
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const MainNavigation()),
+        );
       }
     } catch (e) {
       setState(() {
-        String errorMsg = e.toString();
-        if (errorMsg.contains('Exception: ')) {
-          errorMsg = errorMsg.replaceAll('Exception: ', '');
+        var msg = e.toString().replaceAll('Exception: ', '');
+        if (msg.contains('Invalid login credentials')) {
+          msg = 'Invalid email or password';
         }
-        if (errorMsg.contains('AuthApiError')) {
-          if (errorMsg.contains('Invalid login credentials')) {
-            errorMsg = 'Invalid email or password';
-          } else if (errorMsg.contains('User already registered')) {
-            errorMsg = 'An account with this email already exists';
-          } else {
-            errorMsg = 'Authentication failed. Please check your credentials.';
-          }
-        }
-        _errorMessage = errorMsg;
+        _errorMessage = msg;
         _isLoading = false;
       });
     }
@@ -105,128 +104,183 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Icon(
-                    Icons.check_circle,
-                    size: 80,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  const SizedBox(height: 32),
-                  Text(
-                    _isSignUp ? 'Create Account' : 'Welcome Back',
-                    style: Theme.of(context).textTheme.headlineMedium,
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _isSignUp
-                        ? 'Sign up to start tracking your habits'
-                        : 'Sign in to continue',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 32),
-                  TextFormField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(
-                      labelText: 'Email',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.email),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color(0xFFD1FAE5), // green-100
+              Color(0xFFDBEAFE), // blue-100
+              Color(0xFFECFDF5), // green-50
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Container(
+                width: double.infinity,
+                constraints: const BoxConstraints(maxWidth: 420),
+                padding: const EdgeInsets.all(32),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.15),
+                      blurRadius: 30,
+                      offset: const Offset(0, 20),
                     ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter your email';
-                      }
-                      if (!value.contains('@')) {
-                        return 'Please enter a valid email';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _passwordController,
-                    obscureText: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Password',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.lock),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter your password';
-                      }
-                      if (value.length < 6) {
-                        return 'Password must be at least 6 characters';
-                      }
-                      return null;
-                    },
-                  ),
-                  if (_errorMessage != null) ...[
-                    const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.red[50],
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.red[200]!),
+                  ],
+                ),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      /// Title
+                      ShaderMask(
+                        shaderCallback: (bounds) => const LinearGradient(
+                          colors: [Colors.blue, Colors.green],
+                        ).createShader(bounds),
+                        child: Text(
+                          _isSignUp ? 'Create Account' : 'Login',
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
                       ),
-                      child: Row(
+                      const SizedBox(height: 32),
+
+                      /// Email
+                      _label('Email'),
+                      const SizedBox(height: 6),
+                      _inputField(
+                        controller: _emailController,
+                        hint: 'you@example.com',
+                        icon: Icons.email_outlined,
+                        validator: (v) {
+                          if (v == null || !v.contains('@')) {
+                            return 'Please enter a valid email address.';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 20),
+
+                      /// Password
+                      _label('Password'),
+                      const SizedBox(height: 6),
+                      _inputField(
+                        controller: _passwordController,
+                        hint: 'Enter your password',
+                        icon: Icons.lock_outline,
+                        obscure: _obscurePassword,
+                        suffix: IconButton(
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                          ),
+                          onPressed: () =>
+                              setState(() => _obscurePassword = !_obscurePassword),
+                        ),
+                        validator: (v) {
+                          if (v == null || v.length < 6) {
+                            return 'Password must be at least 6 characters.';
+                          }
+                          return null;
+                        },
+                      ),
+
+                      if (_errorMessage != null) ...[
+                        const SizedBox(height: 20),
+                        Text(
+                          _errorMessage!,
+                          style: const TextStyle(color: Colors.red),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+
+                      const SizedBox(height: 30),
+
+                      /// Button
+                      SizedBox(
+                        height: 52,
+                        child: ElevatedButton(
+                          onPressed: _isLoading ? null : _handleAuth,
+                          style: ElevatedButton.styleFrom(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            padding: EdgeInsets.zero,
+                          ),
+                          child: Ink(
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Colors.green, Colors.blue],
+                              ),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Center(
+                              child: _isLoading
+                                  ? const SizedBox(
+                                      width: 24,
+                                      height: 24,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : Text(
+                                      _isSignUp ? 'Create Account' : 'Login',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      /// Toggle
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.error_outline, color: Colors.red[700]),
-                          const SizedBox(width: 8),
-                          Expanded(
+                          Text(
+                            _isSignUp
+                                ? 'Already have an account?'
+                                : "Don't have an account?",
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              setState(() {
+                                _isSignUp = !_isSignUp;
+                                _errorMessage = null;
+                              });
+                            },
                             child: Text(
-                              _errorMessage!,
-                              style: TextStyle(color: Colors.red[700]),
+                              _isSignUp ? 'Sign In' : 'Sign Up',
+                              style: const TextStyle(fontWeight: FontWeight.bold),
                             ),
                           ),
                         ],
                       ),
-                    ),
-                  ],
-                  const SizedBox(height: 24),
-                  FilledButton(
-                    onPressed: _isLoading ? null : _handleAuth,
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                    ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : Text(_isSignUp ? 'Sign Up' : 'Sign In'),
+                    ],
                   ),
-                  const SizedBox(height: 16),
-                  TextButton(
-                    onPressed: _isLoading
-                        ? null
-                        : () {
-                            setState(() {
-                              _isSignUp = !_isSignUp;
-                              _errorMessage = null;
-                            });
-                          },
-                    child: Text(
-                      _isSignUp
-                          ? 'Already have an account? Sign In'
-                          : 'Don\'t have an account? Sign Up',
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ),
@@ -234,5 +288,40 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       ),
     );
   }
-}
 
+  Widget _label(String text) {
+    return Text(
+      text,
+      style: const TextStyle(fontWeight: FontWeight.w600),
+    );
+  }
+
+  Widget _inputField({
+    required TextEditingController controller,
+    required String hint,
+    required IconData icon,
+    Widget? suffix,
+    bool obscure = false,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      obscureText: obscure,
+      validator: validator,
+      decoration: InputDecoration(
+        hintText: hint,
+        prefixIcon: Icon(icon),
+        suffixIcon: suffix,
+        filled: true,
+        fillColor: Colors.grey.shade100,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: Colors.green, width: 2),
+        ),
+      ),
+    );
+  }
+}
