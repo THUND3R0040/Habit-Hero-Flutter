@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../viewmodels/today_viewmodel.dart';
 import '../widgets/today_habit_item.dart';
-import '../widgets/routine_section.dart';
+import '../widgets/routine/routine_section.dart';
 import 'settings_screen.dart';
 
 class TodayScreen extends ConsumerWidget {

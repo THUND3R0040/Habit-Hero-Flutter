@@ -4,6 +4,7 @@ import '../viewmodels/routines_viewmodel.dart';
 import '../widgets/routine_card.dart';
 import '../widgets/add_routine_dialog.dart';
 import '../widgets/edit_routine_dialog.dart';
+import '../widgets/drag_drop_habit_item.dart';
 
 class RoutinesScreen extends ConsumerStatefulWidget {
   const RoutinesScreen({super.key});
@@ -112,96 +113,182 @@ class _RoutinesScreenState extends ConsumerState<RoutinesScreen> {
     }
 
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: Theme.of(context).colorScheme.background,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(32.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Text(
-                'Routine Builder',
-                style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Group habits into focused routines',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-              ),
-              const SizedBox(height: 32),
-
-              // Routines Grid
-              Expanded(
-                child: state.routines.isEmpty
-                    ? const Center(
-                        child: Text(
-                          'No routines yet. Create your first routine!',
-                          style: TextStyle(fontSize: 16),
+        child: Column(
+          children: [
+            // Header - Fixed height
+            Container(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Routine Builder',
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
                         ),
-                      )
-                    : LayoutBuilder(
-                        builder: (context, constraints) {
-                          int crossAxisCount = 1;
-                          if (constraints.maxWidth > 1024) {
-                            crossAxisCount = 3;
-                          } else if (constraints.maxWidth > 768) {
-                            crossAxisCount = 2;
-                          }
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Long press habits to drag them into routines',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                  ),
+                ],
+              ),
+            ),
 
-                          return RefreshIndicator(
-                            onRefresh: () => viewModel.loadRoutines(),
-                            child: GridView.builder(
-                              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: crossAxisCount,
-                                crossAxisSpacing: 16,
-                                mainAxisSpacing: 16,
-                                childAspectRatio: 1.3,
+            // Available Habits Section - Limited height
+            if (state.unassignedHabits.isNotEmpty)
+              Container(
+                height: 180, // Fixed height to prevent overflow
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Text(
+                        'Available Habits (${state.unassignedHabits.length})',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                    ),
+                    Expanded(
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: state.unassignedHabits.length,
+                        itemBuilder: (context, index) {
+                          final habit = state.unassignedHabits[index];
+                          return SizedBox(
+                            width: 300, // Fixed width
+                            child: Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: DragDropHabitItem(
+                                habit: habit,
+                                isInRoutine: false,
                               ),
-                              itemCount: state.routines.length,
-                              itemBuilder: (context, index) {
-                                final routineWithHabits = state.routines[index];
-                                final routine = routineWithHabits.routine;
-                                
-                                return RoutineCard(
-                                  routine: routine,
-                                  onDelete: () => _deleteRoutine(
-                                    routine.id,
-                                    routine.name,
-                                  ),
-                                  onEdit: () => _showEditDialog(routine.id),
-                                  onToggleActive: () => _toggleActiveRoutine(routine.id),
-                                );
-                              },
                             ),
                           );
                         },
                       ),
+                    ),
+                  ],
+                ),
               ),
 
-              const SizedBox(height: 24),
+            // Divider
+            if (state.unassignedHabits.isNotEmpty && state.routines.isNotEmpty)
+              const Divider(height: 32, thickness: 1),
 
-              // Create Button
-              FilledButton.icon(
-                onPressed: _showAddDialog,
-                icon: const Text('➕', style: TextStyle(fontSize: 16)),
-                label: const Text('Create Routine'),
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 16,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+            // Routines Section - Takes remaining space
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: state.routines.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.dashboard,
+                              size: 64,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'No routines yet',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Create a routine to start organizing habits',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            FilledButton.icon(
+                              onPressed: _showAddDialog,
+                              icon: const Icon(Icons.add, size: 16),
+                              label: const Text('Create Routine'),
+                              style: FilledButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: 12,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: Text(
+                              'Your Routines (${state.routines.length})',
+                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                            ),
+                          ),
+                          Expanded(
+                            child: RefreshIndicator(
+                              onRefresh: () => viewModel.loadRoutines(),
+                              child: GridView.builder(
+                                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 2,
+                                  crossAxisSpacing: 12,
+                                  mainAxisSpacing: 12,
+                                  childAspectRatio: 1.3,
+                                ),
+                                itemCount: state.routines.length,
+                                itemBuilder: (context, index) {
+                                  final routineWithHabits = state.routines[index];
+                                  final routine = routineWithHabits.routine;
+                                  
+                                  return RoutineCard(
+                                    routine: routine,
+                                    habits: routineWithHabits.habits,
+                                    onDelete: () => _deleteRoutine(
+                                      routine.id,
+                                      routine.name,
+                                    ),
+                                    onEdit: () => _showEditDialog(routine.id),
+                                    onToggleActive: () => _toggleActiveRoutine(routine.id),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+              ),
+            ),
+
+            // Create Button - Fixed at bottom
+            if (state.routines.isNotEmpty)
+              Container(
+                padding: const EdgeInsets.all(16),
+                child: FilledButton.icon(
+                  onPressed: _showAddDialog,
+                  icon: const Icon(Icons.add, size: 16),
+                  label: const Text('Create Routine'),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 48),
                   ),
                 ),
               ),
-            ],
-          ),
+          ],
         ),
       ),
     );

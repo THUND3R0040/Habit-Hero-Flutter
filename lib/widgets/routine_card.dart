@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/routine.dart';
+import '../models/habit.dart';
+import '../viewmodels/routines_viewmodel.dart';
+import 'drag_drop_habit_item.dart';
 
 class RoutineCard extends StatefulWidget {
   final Routine routine;
+  final List<Habit> habits;
   final VoidCallback onDelete;
   final VoidCallback onEdit;
   final VoidCallback onToggleActive;
@@ -10,6 +15,7 @@ class RoutineCard extends StatefulWidget {
   const RoutineCard({
     super.key,
     required this.routine,
+    required this.habits,
     required this.onDelete,
     required this.onEdit,
     required this.onToggleActive,
@@ -23,6 +29,7 @@ class _RoutineCardState extends State<RoutineCard> {
   bool _showMenu = false;
   final LayerLink _layerLink = LayerLink();
   OverlayEntry? _overlayEntry;
+  bool _isDragOver = false;
 
   void _toggleMenu() {
     if (_showMenu) {
@@ -129,81 +136,201 @@ class _RoutineCardState extends State<RoutineCard> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     
-    return CompositedTransformTarget(
-      link: _layerLink,
-      child: Container(
-        decoration: BoxDecoration(
-          color: widget.routine.active 
-              ? theme.colorScheme.surface
-              : theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: theme.colorScheme.outline.withOpacity(0.2),
-          ),
-        ),
-        child: Opacity(
-          opacity: widget.routine.active ? 1.0 : 0.75,
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header with title and menu button
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.routine.name,
-                            style: theme.textTheme.headlineSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
+    return Consumer(
+      builder: (context, ref, child) {
+        final state = ref.watch(routinesViewModelProvider);
+        final isDragTarget = state.routineDragTargets[widget.routine.id] ?? false;
+        
+        return DragTarget<String>(
+          onAccept: (habitId) {
+            // Add habit to routine
+            ref.read(routinesViewModelProvider.notifier).addHabitToRoutine(
+              routineId: widget.routine.id,
+              habitId: habitId,
+            );
+            setState(() => _isDragOver = false);
+          },
+          onWillAccept: (data) {
+            // Check if habit is already in this routine
+            final isAlreadyInRoutine = widget.habits.any((h) => h.id == data);
+            return !isAlreadyInRoutine;
+          },
+          onLeave: (data) {
+            setState(() => _isDragOver = false);
+            ref.read(routinesViewModelProvider.notifier).setDragTarget(widget.routine.id, false);
+          },
+          onMove: (details) {
+            setState(() => _isDragOver = true);
+            ref.read(routinesViewModelProvider.notifier).setDragTarget(widget.routine.id, true);
+          },
+          builder: (context, candidateData, rejectedData) {
+            return CompositedTransformTarget(
+              link: _layerLink,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                decoration: BoxDecoration(
+                  color: _isDragOver || isDragTarget
+                      ? theme.colorScheme.primaryContainer.withOpacity(0.3)
+                      : widget.routine.active 
+                          ? theme.colorScheme.surface
+                          : theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: _isDragOver || isDragTarget
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.outline.withOpacity(0.2),
+                    width: _isDragOver || isDragTarget ? 2 : 1,
+                  ),
+                  boxShadow: _isDragOver || isDragTarget
+                      ? [
+                          BoxShadow(
+                            color: theme.colorScheme.primary.withOpacity(0.2),
+                            blurRadius: 8,
+                            spreadRadius: 2,
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Opacity(
+                  opacity: widget.routine.active ? 1.0 : 0.75,
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Header with title and menu button
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    widget.routine.name,
+                                    style: theme.textTheme.headlineSmall?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    _getRoutineTypeDisplay(),
+                                    style: theme.textTheme.bodyMedium,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  // Active/Inactive Toggle
+                                  _ActiveToggle(
+                                    isActive: widget.routine.active,
+                                    onToggle: widget.onToggleActive,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            // Three-dot menu button
+                            IconButton(
+                              onPressed: _toggleMenu,
+                              icon: const Icon(Icons.more_vert),
+                              tooltip: 'More options',
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Description
+                        if (widget.routine.description?.isNotEmpty == true)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: Text(
+                              widget.routine.description ?? '',
+                              style: theme.textTheme.bodyLarge?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                                height: 1.5,
+                              ),
                             ),
                           ),
-                          const SizedBox(height: 12),
-                          Text(
-                            _getRoutineTypeDisplay(),
-                            style: theme.textTheme.bodyMedium,
-                          ),
-                          const SizedBox(height: 12),
-                          // Active/Inactive Toggle
-                          _ActiveToggle(
-                            isActive: widget.routine.active,
-                            onToggle: widget.onToggleActive,
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Three-dot menu button
-                    IconButton(
-                      onPressed: _toggleMenu,
-                      icon: const Icon(Icons.more_vert),
-                      tooltip: 'More options',
-                    ),
-                  ],
-                ),
 
-                const SizedBox(height: 16),
-
-                // Description
-                Expanded(
-                  child: Center(
-                    child: Text(
-                      widget.routine.description ?? '',
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                        height: 1.5,
-                      ),
+                        // Habits Section
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Habits (${widget.habits.length})',
+                                style: theme.textTheme.labelLarge?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              
+                              if (widget.habits.isEmpty)
+                                Expanded(
+                                  child: Center(
+                                    child: Container(
+                                      padding: const EdgeInsets.all(20),
+                                      decoration: BoxDecoration(
+                                        color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: theme.colorScheme.outline.withOpacity(0.1),
+                                          // Use a different visual cue instead of dashed border
+                                        ),
+                                      ),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.drag_indicator,
+                                            size: 40,
+                                            color: theme.colorScheme.onSurfaceVariant,
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            'Drag habits here',
+                                            style: theme.textTheme.bodyMedium?.copyWith(
+                                              color: theme.colorScheme.onSurfaceVariant,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            'Drop zone',
+                                            style: theme.textTheme.bodySmall?.copyWith(
+                                              color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              else
+                                Expanded(
+                                  child: ListView.separated(
+                                    shrinkWrap: true,
+                                    itemCount: widget.habits.length,
+                                    separatorBuilder: (context, index) => const SizedBox(height: 8),
+                                    itemBuilder: (context, index) {
+                                      final habit = widget.habits[index];
+                                      return DragDropHabitItem(
+                                        habit: habit,
+                                        isInRoutine: true,
+                                        routineId: widget.routine.id,
+                                      );
+                                    },
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-              ],
-            ),
-          ),
-        ),
-      ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }
