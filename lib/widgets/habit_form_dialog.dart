@@ -78,16 +78,6 @@ class _HabitFormDialogState extends State<HabitFormDialog> {
     }
   }
 
-  IconData _getIconFromString(String iconString) {
-    try {
-      return IconData(
-        int.parse(iconString),
-        fontFamily: 'MaterialIcons',
-      );
-    } catch (e) {
-      return Icons.check_circle;
-    }
-  }
 
   @override
   Widget build(BuildContext context) {

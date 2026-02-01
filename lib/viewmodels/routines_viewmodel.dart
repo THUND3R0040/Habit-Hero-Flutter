@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/routine.dart';
 import '../models/habit.dart';
-import '../models/routine_habit.dart';
 import '../services/routine_service.dart';
 import '../services/habit_service.dart';
 import '../services/supabase_providers.dart';

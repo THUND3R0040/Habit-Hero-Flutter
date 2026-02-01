@@ -42,7 +42,7 @@ class HabitService {
       'color': color,
     }).select().single();
 
-    return Habit.fromJson(response as Map<String, dynamic>);
+    return Habit.fromJson(response);
   }
 
   Future<Habit> updateHabit({
@@ -67,7 +67,7 @@ class HabitService {
         .select()
         .single();
 
-    return Habit.fromJson(response as Map<String, dynamic>);
+    return Habit.fromJson(response);
   }
 
   Future<void> deleteHabit(String id) async {
@@ -89,7 +89,7 @@ class HabitService {
         .maybeSingle();
 
     if (response == null) return null;
-    return Habit.fromJson(response as Map<String, dynamic>);
+    return Habit.fromJson(response);
   }
 }
 

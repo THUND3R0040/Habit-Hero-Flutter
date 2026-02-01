@@ -4,7 +4,6 @@ import 'calendar_screen.dart';
 import 'habits_screen.dart';
 import 'routines_screen.dart';
 import 'insights_screen.dart';
-import 'settings_screen.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
@@ -24,11 +23,6 @@ class _MainNavigationState extends State<MainNavigation> {
     const InsightsScreen(),
   ];
 
-  void _openSettings(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const SettingsScreen()),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {

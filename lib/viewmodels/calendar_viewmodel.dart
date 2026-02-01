@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/habit.dart';
-import '../models/habit_completion.dart';
 import '../services/habit_service.dart';
 import '../services/completion_service.dart';
 import '../services/supabase_providers.dart';
@@ -130,7 +129,6 @@ class CalendarViewModel extends StateNotifier<CalendarState> {
 
   Future<void> loadDayDetails(DateTime date) async {
     try {
-      final dateStr = date.toIso8601String().split('T')[0];
       final habits = await _habitService.getHabits();
       final completions = await _completionService.getCompletionsForDate(date);
 

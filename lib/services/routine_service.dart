@@ -46,7 +46,7 @@ class RoutineService {
       'active': active,
     }).select().single();
 
-    return Routine.fromJson(response as Map<String, dynamic>);
+    return Routine.fromJson(response);
   }
 
   // UPDATE this method to include description, type, and customTimeText
@@ -74,7 +74,7 @@ class RoutineService {
         .select()
         .single();
 
-    return Routine.fromJson(response as Map<String, dynamic>);
+    return Routine.fromJson(response);
   }
 
   // ADD this new method for form-based updates
@@ -112,7 +112,7 @@ class RoutineService {
         .eq('user_id', _userId!)
         .single();
     
-    final routine = Routine.fromJson(currentRoutine as Map<String, dynamic>);
+    final routine = Routine.fromJson(currentRoutine);
     
     // Toggle and update
     final response = await _supabase
@@ -123,7 +123,7 @@ class RoutineService {
         .select()
         .single();
 
-    return Routine.fromJson(response as Map<String, dynamic>);
+    return Routine.fromJson(response);
   }
 
   Future<List<RoutineHabit>> getRoutineHabits(String routineId) async {

@@ -34,7 +34,7 @@ class CompletionService {
         .maybeSingle();
 
     if (response == null) return null;
-    return HabitCompletion.fromJson(response as Map<String, dynamic>);
+    return HabitCompletion.fromJson(response);
   }
 
   Future<List<HabitCompletion>> getCompletionsForDate(DateTime date) async {
