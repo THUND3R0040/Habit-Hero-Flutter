@@ -156,7 +156,6 @@ class _RoutineCardState extends State<RoutineCard> {
             setState(() => _isDragOver = false);
           },
           onWillAcceptWithDetails: (data) {
-            // ignore: unrelated_type_equality_checks
             final isAlreadyInRoutine = widget.habits.any((h) => h.id == data);
             final state = ref.read(routinesViewModelProvider);
             final isSameRoutine = state.sourceRoutineId == widget.routine.id;
@@ -209,32 +208,16 @@ class _RoutineCardState extends State<RoutineCard> {
                     padding: const EdgeInsets.all(16.0),
                     child: LayoutBuilder(
                       builder: (context, constraints) {
-                        // Everything inside the card scales off this single
-                        // width measurement.  A half-screen card on a 360px
-                        // phone lands around 148-164px here after the outer
-                        // padding and the 16px gap in the two-column Row.
                         final bool isNarrow = constraints.maxWidth < 180;
 
-                        // --- title ---
                         final titleStyle = (isNarrow
                                 ? theme.textTheme.titleMedium
                                 : theme.textTheme.titleLarge)
                             ?.copyWith(fontWeight: FontWeight.bold);
 
-                        // --- description ---
-                        final descStyle = (isNarrow
-                                ? theme.textTheme.bodySmall
-                                : theme.textTheme.bodyMedium)
-                            ?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                          height: 1.4,
-                        );
-
-                        // --- spacing ---
                         final double smallGap = isNarrow ? 6.0 : 10.0;
                         final double sectionGap = isNarrow ? 10.0 : 14.0;
 
-                        // --- drop zone ---
                         final double dropZoneHeight = isNarrow ? 80.0 : 110.0;
                         final double dropIconSize = isNarrow ? 28.0 : 36.0;
 
@@ -242,7 +225,6 @@ class _RoutineCardState extends State<RoutineCard> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            // ── Header row: title column + menu button ──
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -252,7 +234,6 @@ class _RoutineCardState extends State<RoutineCard> {
                                         CrossAxisAlignment.start,
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      // Title — 2 lines max, ellipsis after
                                       Text(
                                         widget.routine.name,
                                         style: titleStyle,
@@ -260,7 +241,6 @@ class _RoutineCardState extends State<RoutineCard> {
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                       SizedBox(height: smallGap),
-                                      // Routine type label
                                       Text(
                                         _getRoutineTypeDisplay(),
                                         style: theme.textTheme.bodySmall
@@ -271,125 +251,68 @@ class _RoutineCardState extends State<RoutineCard> {
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                       ),
-                                      SizedBox(height: smallGap),
-                                      // Active / Inactive toggle
-                                      _ActiveToggle(
-                                        isActive: widget.routine.active,
-                                        onToggle: widget.onToggleActive,
-                                        compact: isNarrow,
-                                      ),
                                     ],
                                   ),
                                 ),
-                                // Three-dot menu — smaller on narrow
                                 IconButton(
                                   onPressed: _toggleMenu,
-                                  icon: Icon(Icons.more_vert,
-                                      size: isNarrow ? 18 : 24),
-                                  iconSize: isNarrow ? 18 : 24,
-                                  padding: isNarrow
-                                      ? const EdgeInsets.all(4)
-                                      : null,
-                                  constraints: isNarrow
-                                      ? const BoxConstraints(
-                                          minWidth: 28, minHeight: 28)
-                                      : null,
-                                  tooltip: 'More options',
+                                  icon: const Icon(Icons.more_vert),
+                                  style: IconButton.styleFrom(
+                                    padding: EdgeInsets.zero,
+                                    minimumSize: const Size(40, 40),
+                                  ),
                                 ),
                               ],
                             ),
-
                             SizedBox(height: sectionGap),
-
-                            // ── Description ──
-                            if (widget.routine.description?.isNotEmpty == true)
-                              Padding(
-                                padding: EdgeInsets.only(bottom: sectionGap),
-                                child: Text(
-                                  widget.routine.description ?? '',
-                                  style: descStyle,
-                                  // Fewer lines on narrow so the card
-                                  // stays compact; still readable.
-                                  maxLines: isNarrow ? 2 : 3,
-                                  overflow: TextOverflow.ellipsis,
+                            if (widget.habits.isEmpty)
+                              Container(
+                                height: dropZoneHeight,
+                                width: double.infinity,
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.surfaceContainerHighest
+                                      .withOpacity(0.5),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: theme.colorScheme.outline
+                                        .withOpacity(0.1),
+                                    style: BorderStyle.solid,
+                                  ),
                                 ),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.add_circle_outline,
+                                      size: dropIconSize,
+                                      color: theme.colorScheme.onSurfaceVariant
+                                          .withOpacity(0.5),
+                                    ),
+                                    SizedBox(height: isNarrow ? 4 : 8),
+                                    Text(
+                                      'Drop habits here',
+                                      style: theme.textTheme.bodySmall?.copyWith(
+                                        color: theme.colorScheme.onSurfaceVariant
+                                            .withOpacity(0.5),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            else
+                              ListView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: widget.habits.length,
+                                itemBuilder: (context, index) {
+                                  final habit = widget.habits[index];
+                                  return DragDropHabitItem(
+                                    habit: habit,
+                                    isInRoutine: true,
+                                    routineId: widget.routine.id,
+                                  );
+                                },
                               ),
-
-                            // ── Habits section ──
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  'Habits (${widget.habits.length})',
-                                  style: (isNarrow
-                                          ? theme.textTheme.bodySmall
-                                          : theme.textTheme.labelLarge)
-                                      ?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                SizedBox(height: smallGap),
-                                if (widget.habits.isEmpty)
-                                  // Empty drop zone — height and icon scale
-                                  Container(
-                                    height: dropZoneHeight,
-                                    decoration: BoxDecoration(
-                                      color: theme.colorScheme
-                                          .surfaceContainerHighest
-                                          .withOpacity(0.3),
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: theme.colorScheme.outline
-                                            .withOpacity(0.1),
-                                      ),
-                                    ),
-                                    child: Center(
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(
-                                            Icons.drag_indicator,
-                                            size: dropIconSize,
-                                            color: theme
-                                                .colorScheme.onSurfaceVariant,
-                                          ),
-                                          SizedBox(
-                                              height: isNarrow ? 4.0 : 6.0),
-                                          Text(
-                                            'Drag habits here',
-                                            style: (isNarrow
-                                                    ? theme.textTheme.bodySmall
-                                                    : theme
-                                                        .textTheme.bodyMedium)
-                                                ?.copyWith(
-                                              color: theme
-                                                  .colorScheme.onSurfaceVariant,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  )
-                                else
-                                  ListView.separated(
-                                    shrinkWrap: true,
-                                    physics:
-                                        const NeverScrollableScrollPhysics(),
-                                    itemCount: widget.habits.length,
-                                    separatorBuilder: (context, index) =>
-                                        const SizedBox(height: 4),
-                                    itemBuilder: (context, index) {
-                                      final habit = widget.habits[index];
-                                      return DragDropHabitItem(
-                                        habit: habit,
-                                        isInRoutine: true,
-                                        routineId: widget.routine.id,
-                                      );
-                                    },
-                                  ),
-                              ],
-                            ),
                           ],
                         );
                       },
@@ -405,83 +328,6 @@ class _RoutineCardState extends State<RoutineCard> {
   }
 }
 
-// ---------------------------------------------------------------------------
-// _ActiveToggle
-// ---------------------------------------------------------------------------
-class _ActiveToggle extends StatelessWidget {
-  final bool isActive;
-  final VoidCallback onToggle;
-  // When compact is true the track and knob shrink and the label text drops
-  // to bodySmall so the toggle fits comfortably on narrow cards.
-  final bool compact;
-
-  const _ActiveToggle({
-    required this.isActive,
-    required this.onToggle,
-    this.compact = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    // Track dimensions
-    final double trackW = compact ? 36.0 : 44.0;
-    final double trackH = compact ? 20.0 : 24.0;
-    final double knobD = compact ? 13.0 : 16.0;
-    final double knobMargin = compact ? 3.0 : 4.0;
-
-    return GestureDetector(
-      onTap: onToggle,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: trackW,
-            height: trackH,
-            decoration: BoxDecoration(
-              color: isActive ? Colors.green : Colors.grey.shade300,
-              borderRadius: BorderRadius.circular(trackH / 2),
-            ),
-            child: AnimatedAlign(
-              duration: const Duration(milliseconds: 200),
-              alignment:
-                  isActive ? Alignment.centerRight : Alignment.centerLeft,
-              child: Container(
-                width: knobD,
-                height: knobD,
-                margin: EdgeInsets.symmetric(horizontal: knobMargin),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 2,
-                      offset: Offset(0, 1),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 6),
-          Text(
-            isActive ? 'Active' : 'Inactive',
-            style: TextStyle(
-              fontSize: compact ? 11 : 13,
-              fontWeight: FontWeight.w500,
-              color:
-                  isActive ? Colors.green.shade700 : Colors.grey.shade600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// _MenuButton
-// ---------------------------------------------------------------------------
 class _MenuButton extends StatefulWidget {
   final String icon;
   final String label;

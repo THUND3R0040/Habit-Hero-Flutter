@@ -115,9 +115,6 @@ class _RoutinesScreenState extends ConsumerState<RoutinesScreen> {
       );
     }
 
-    // KEY FIX: The entire screen is now a single scrollable ListView.
-    // This eliminates all the competing Expanded/flex layout that caused
-    // overflow on smaller screens. Each section is sized to its content.
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
       body: SafeArea(
@@ -126,7 +123,6 @@ class _RoutinesScreenState extends ConsumerState<RoutinesScreen> {
           child: ListView(
             padding: EdgeInsets.zero,
             children: [
-              // Header
               Padding(
                 padding: const EdgeInsets.all(32.0),
                 child: Column(
@@ -150,7 +146,6 @@ class _RoutinesScreenState extends ConsumerState<RoutinesScreen> {
                 ),
               ),
 
-              // Available Habits Section
               if (state.unassignedHabits.isNotEmpty) ...[
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -172,8 +167,6 @@ class _RoutinesScreenState extends ConsumerState<RoutinesScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                // KEY FIX: no Expanded here. The list uses shrinkWrap so it
-                // takes exactly the height it needs within the outer ListView.
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: ListView.builder(
@@ -191,7 +184,6 @@ class _RoutinesScreenState extends ConsumerState<RoutinesScreen> {
                 ),
                 const SizedBox(height: 16),
               ] else if (state.routines.isEmpty) ...[
-                // Empty state when no habits exist at all
                 SizedBox(
                   height: 200,
                   child: Center(
@@ -218,7 +210,6 @@ class _RoutinesScreenState extends ConsumerState<RoutinesScreen> {
                 ),
               ],
 
-              // Routines Section
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: state.routines.isEmpty
@@ -233,7 +224,6 @@ class _RoutinesScreenState extends ConsumerState<RoutinesScreen> {
                                   .colorScheme
                                   .onSurfaceVariant,
                             ),
-                            const SizedBox(height: 16),
                             Text(
                               'No routines yet. Create your first routine!',
                               style: TextStyle(
@@ -273,11 +263,6 @@ class _RoutinesScreenState extends ConsumerState<RoutinesScreen> {
                                     ),
                           ),
                           const SizedBox(height: 16),
-                          // KEY FIX: replaced GridView with a simple column of
-                          // two-column rows. Each RoutineCard is no longer
-                          // forced into a fixed aspect ratio — it sizes itself
-                          // to its content. This is the main reason cards were
-                          // overflowing on emulator screens.
                           for (int i = 0; i < state.routines.length; i += 2) ...[
                             Row(
                               children: [
@@ -318,7 +303,6 @@ class _RoutinesScreenState extends ConsumerState<RoutinesScreen> {
                                                       .routine
                                                       .id),
                                         )
-                                      // Placeholder to keep the row balanced
                                       : const SizedBox(),
                                 ),
                               ],
@@ -329,7 +313,6 @@ class _RoutinesScreenState extends ConsumerState<RoutinesScreen> {
                       ),
               ),
 
-              // Create Button (only shown when there are routines)
               if (state.routines.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.all(32.0),

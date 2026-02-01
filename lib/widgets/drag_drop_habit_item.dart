@@ -39,6 +39,139 @@ class _DragDropHabitItemState extends ConsumerState<DragDropHabitItem> {
     }
   }
 
+  void _showHabitDetailPopup() {
+    final color = _getColorFromString(widget.habit.color);
+    final icon = _getIconFromString(widget.habit.icon);
+    
+    showDialog(
+      context: context,
+      useSafeArea: false,
+      builder: (context) => Dialog.fullscreen(
+        child: Scaffold(
+          appBar: AppBar(
+            leading: IconButton(
+              icon: const Icon(Icons.close),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            title: const Text('Habit Details'),
+            centerTitle: true,
+          ),
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const SizedBox(height: 20),
+                // Habit Icon
+                Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: color,
+                    size: 50,
+                  ),
+                ),
+                const SizedBox(height: 32),
+                // Habit Name
+                Text(
+                  widget.habit.name,
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                // Habit Description
+                if (widget.habit.description != null && widget.habit.description!.isNotEmpty) ...[
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.description_outlined,
+                              size: 18,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Description',
+                              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          widget.habit.description!,
+                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            height: 1.5,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ] else
+                  Text(
+                    'No description provided.',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontStyle: FontStyle.italic,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                const SizedBox(height: 40),
+                // Info Rows
+                _buildInfoRow(
+                  context,
+                  Icons.calendar_today_outlined,
+                  'Frequency',
+                  'Daily',
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(BuildContext context, IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: Theme.of(context).colorScheme.onSurfaceVariant),
+        const SizedBox(width: 12),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const Spacer(),
+        Text(
+          value,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final color = _getColorFromString(widget.habit.color);
@@ -46,8 +179,6 @@ class _DragDropHabitItemState extends ConsumerState<DragDropHabitItem> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Scale thresholds based on available width.
-        // A half-screen card on a 360px phone is ~164px after padding.
         final bool isNarrow = constraints.maxWidth < 180;
 
         final double iconSize = isNarrow ? 28 : 40;
@@ -128,82 +259,79 @@ class _DragDropHabitItemState extends ConsumerState<DragDropHabitItem> {
   }) {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 6),
-      child: Padding(
-        padding: EdgeInsets.all(cardPadding),
-        child: Row(
-          // mainAxisSize.max so Expanded text column fills all remaining
-          // space and text truncates at exactly the right point instead
-          // of the Row collapsing to intrinsic width.
-          mainAxisSize: MainAxisSize.max,
-          children: [
-            // Drag handle
-            Padding(
-              padding: EdgeInsets.only(right: gapAfterHandle),
-              child: Icon(
-                Icons.drag_handle,
-                color: Colors.grey.shade400,
-                size: handleSize,
-              ),
-            ),
-
-            // Habit icon circle
-            SizedBox(
-              width: iconSize,
-              height: iconSize,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(iconSize * 0.25),
+      child: InkWell(
+        onTap: _showHabitDetailPopup,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: EdgeInsets.all(cardPadding),
+          child: Row(
+            mainAxisSize: MainAxisSize.max,
+            children: [
+              Padding(
+                padding: EdgeInsets.only(right: gapAfterHandle),
+                child: Icon(
+                  Icons.drag_handle,
+                  color: Colors.grey.shade400,
+                  size: handleSize,
                 ),
-                child: Center(
-                  child: Icon(
-                    icon,
-                    color: color,
-                    size: iconInnerSize,
+              ),
+
+              SizedBox(
+                width: iconSize,
+                height: iconSize,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(iconSize * 0.25),
+                  ),
+                  child: Center(
+                    child: Icon(
+                      icon,
+                      color: color,
+                      size: iconInnerSize,
+                    ),
                   ),
                 ),
               ),
-            ),
 
-            SizedBox(width: gapAfterIcon),
+              SizedBox(width: gapAfterIcon),
 
-            // Text — fills remaining width, truncates cleanly
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    widget.habit.name,
-                    style: Theme.of(context).textTheme.titleSmall,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  if (widget.habit.description != null &&
-                      widget.habit.description!.isNotEmpty)
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
                     Text(
-                      widget.habit.description!,
-                      style: Theme.of(context).textTheme.bodySmall,
+                      widget.habit.name,
+                      style: Theme.of(context).textTheme.titleSmall,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                ],
+                    if (widget.habit.description != null &&
+                        widget.habit.description!.isNotEmpty)
+                      Text(
+                        widget.habit.description!,
+                        style: Theme.of(context).textTheme.bodySmall,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                  ],
+                ),
               ),
-            ),
 
-            // Remove button — only inside a routine
-            if (widget.isInRoutine && widget.routineId != null)
-              IconButton(
-                iconSize: 16,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                icon: const Icon(Icons.close, size: 16),
-                onPressed: () {
-                  _removeFromRoutine(context, widget.routineId!);
-                },
-                tooltip: 'Remove from routine',
-              ),
-          ],
+              if (widget.isInRoutine && widget.routineId != null)
+                IconButton(
+                  iconSize: 16,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  icon: const Icon(Icons.close, size: 16),
+                  onPressed: () {
+                    _removeFromRoutine(context, widget.routineId!);
+                  },
+                  tooltip: 'Remove from routine',
+                ),
+            ],
+          ),
         ),
       ),
     );
