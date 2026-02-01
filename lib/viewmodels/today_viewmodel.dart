@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/habit.dart';
 import '../models/routine.dart';
-import '../models/habit_completion.dart';
 import '../services/habit_service.dart';
 import '../services/routine_service.dart';
 import '../services/completion_service.dart';
@@ -157,7 +156,7 @@ class TodayViewModel extends StateNotifier<TodayState> {
   }
 
   List<Routine> getActiveRoutines() {
-    final routineIds = state.habits
+    state.habits
         .where((h) => h.routine != null)
         .map((h) => h.routine!.id)
         .toSet();

@@ -21,6 +21,7 @@ class RoutineSection extends StatelessWidget {
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
         if (routine != null)
           Padding(
@@ -32,13 +33,20 @@ class RoutineSection extends StatelessWidget {
                   ),
             ),
           ),
-        ...habits.map((todayHabit) => TodayHabitItem(
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: habits.length,
+          itemBuilder: (context, index) {
+            final todayHabit = habits[index];
+            return TodayHabitItem(
               habit: todayHabit.habit,
               completed: todayHabit.completed,
               onToggle: () => onToggleHabit(todayHabit.habit.id),
-            )),
+            );
+          },
+        ),
       ],
     );
   }
 }
-
