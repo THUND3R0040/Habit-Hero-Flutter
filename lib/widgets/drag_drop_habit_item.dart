@@ -3,10 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/habit.dart';
 import '../viewmodels/routines_viewmodel.dart';
 
-class DragDropHabitItem extends ConsumerWidget {
+class DragDropHabitItem extends ConsumerStatefulWidget {
   final Habit habit;
   final bool isInRoutine;
-  final String? routineId; // The routine this habit belongs to (if any)
+  final String? routineId;
 
   const DragDropHabitItem({
     super.key,
@@ -15,6 +15,11 @@ class DragDropHabitItem extends ConsumerWidget {
     this.routineId,
   });
 
+  @override
+  ConsumerState<DragDropHabitItem> createState() => _DragDropHabitItemState();
+}
+
+class _DragDropHabitItemState extends ConsumerState<DragDropHabitItem> {
   Color _getColorFromString(String colorString) {
     try {
       return Color(int.parse(colorString.replaceFirst('#', '0xFF')));
@@ -35,89 +40,149 @@ class DragDropHabitItem extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final color = _getColorFromString(habit.color);
-    final icon = _getIconFromString(habit.icon);
+  Widget build(BuildContext context) {
+    final color = _getColorFromString(widget.habit.color);
+    final icon = _getIconFromString(widget.habit.icon);
 
-    return Draggable<String>(
-      data: habit.id,
-      feedback: Material(
-        color: Colors.transparent,
-        child: Container(
-          width: 300,
-          child: _buildHabitCard(context, color, icon),
-        ),
-      ),
-      childWhenDragging: Opacity(
-        opacity: 0.3,
-        child: _buildHabitCard(context, color, icon),
-      ),
-      onDragStarted: () {
-        // Pass the source routine ID when starting drag
-        ref.read(routinesViewModelProvider.notifier).startDragging(
-          habit.id,
-          sourceRoutineId: routineId, // This tells us where it came from
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Scale thresholds based on available width.
+        // A half-screen card on a 360px phone is ~164px after padding.
+        final bool isNarrow = constraints.maxWidth < 180;
+
+        final double iconSize = isNarrow ? 28 : 40;
+        final double iconInnerSize = isNarrow ? 14 : 20;
+        final double handleSize = isNarrow ? 16 : 18;
+        final double gapAfterHandle = isNarrow ? 6 : 8;
+        final double gapAfterIcon = isNarrow ? 6 : 10;
+        final double cardPadding = isNarrow ? 8 : 12;
+
+        return Draggable<String>(
+          data: widget.habit.id,
+          feedback: Material(
+            color: Colors.transparent,
+            child: SizedBox(
+              width: constraints.maxWidth,
+              child: _buildHabitCard(
+                context, color, icon,
+                iconSize: iconSize,
+                iconInnerSize: iconInnerSize,
+                handleSize: handleSize,
+                gapAfterHandle: gapAfterHandle,
+                gapAfterIcon: gapAfterIcon,
+                cardPadding: cardPadding,
+              ),
+            ),
+          ),
+          childWhenDragging: Opacity(
+            opacity: 0.3,
+            child: _buildHabitCard(
+              context, color, icon,
+              iconSize: iconSize,
+              iconInnerSize: iconInnerSize,
+              handleSize: handleSize,
+              gapAfterHandle: gapAfterHandle,
+              gapAfterIcon: gapAfterIcon,
+              cardPadding: cardPadding,
+            ),
+          ),
+          onDragStarted: () {
+            if (!mounted) return;
+            ref.read(routinesViewModelProvider.notifier).startDragging(
+              widget.habit.id,
+              sourceRoutineId: widget.routineId,
+            );
+          },
+          onDragEnd: (details) {
+            if (!mounted) return;
+            ref.read(routinesViewModelProvider.notifier).stopDragging();
+          },
+          onDraggableCanceled: (velocity, offset) {
+            if (!mounted) return;
+            ref.read(routinesViewModelProvider.notifier).stopDragging();
+          },
+          child: _buildHabitCard(
+            context, color, icon,
+            iconSize: iconSize,
+            iconInnerSize: iconInnerSize,
+            handleSize: handleSize,
+            gapAfterHandle: gapAfterHandle,
+            gapAfterIcon: gapAfterIcon,
+            cardPadding: cardPadding,
+          ),
         );
       },
-      onDragEnd: (details) {
-        ref.read(routinesViewModelProvider.notifier).stopDragging();
-      },
-      onDraggableCanceled: (velocity, offset) {
-        ref.read(routinesViewModelProvider.notifier).stopDragging();
-      },
-      child: GestureDetector(
-        onLongPress: () {
-          // Optional: Provide haptic feedback
-          // HapticFeedback.selectionClick();
-        },
-        child: _buildHabitCard(context, color, icon),
-      ),
     );
   }
 
-  Widget _buildHabitCard(BuildContext context, Color color, IconData icon) {
+  Widget _buildHabitCard(
+    BuildContext context,
+    Color color,
+    IconData icon, {
+    required double iconSize,
+    required double iconInnerSize,
+    required double handleSize,
+    required double gapAfterHandle,
+    required double gapAfterIcon,
+    required double cardPadding,
+  }) {
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: const EdgeInsets.symmetric(vertical: 6),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(cardPadding),
         child: Row(
+          // mainAxisSize.max so Expanded text column fills all remaining
+          // space and text truncates at exactly the right point instead
+          // of the Row collapsing to intrinsic width.
+          mainAxisSize: MainAxisSize.max,
           children: [
-            // Drag Handle
+            // Drag handle
             Padding(
-              padding: const EdgeInsets.only(right: 12),
+              padding: EdgeInsets.only(right: gapAfterHandle),
               child: Icon(
                 Icons.drag_handle,
                 color: Colors.grey.shade400,
-                size: 20,
+                size: handleSize,
               ),
             ),
-            
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                icon,
-                color: color,
-                size: 24,
+
+            // Habit icon circle
+            SizedBox(
+              width: iconSize,
+              height: iconSize,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(iconSize * 0.25),
+                ),
+                child: Center(
+                  child: Icon(
+                    icon,
+                    color: color,
+                    size: iconInnerSize,
+                  ),
+                ),
               ),
             ),
-            const SizedBox(width: 16),
+
+            SizedBox(width: gapAfterIcon),
+
+            // Text — fills remaining width, truncates cleanly
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    habit.name,
-                    style: Theme.of(context).textTheme.titleMedium,
+                    widget.habit.name,
+                    style: Theme.of(context).textTheme.titleSmall,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  if (habit.description != null &&
-                      habit.description!.isNotEmpty)
+                  if (widget.habit.description != null &&
+                      widget.habit.description!.isNotEmpty)
                     Text(
-                      habit.description!,
+                      widget.habit.description!,
                       style: Theme.of(context).textTheme.bodySmall,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -125,13 +190,16 @@ class DragDropHabitItem extends ConsumerWidget {
                 ],
               ),
             ),
-            
-            // Remove button for habits in routines
-            if (isInRoutine && routineId != null)
+
+            // Remove button — only inside a routine
+            if (widget.isInRoutine && widget.routineId != null)
               IconButton(
-                icon: const Icon(Icons.close, size: 18),
+                iconSize: 16,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                icon: const Icon(Icons.close, size: 16),
                 onPressed: () {
-                  _removeFromRoutine(context, routineId!);
+                  _removeFromRoutine(context, widget.routineId!);
                 },
                 tooltip: 'Remove from routine',
               ),
@@ -146,7 +214,7 @@ class DragDropHabitItem extends ConsumerWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Remove Habit'),
-        content: Text('Remove "${habit.name}" from this routine?'),
+        content: Text('Remove "${widget.habit.name}" from this routine?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
@@ -155,21 +223,20 @@ class DragDropHabitItem extends ConsumerWidget {
           FilledButton(
             onPressed: () {
               Navigator.of(context).pop();
-              _performRemove(context, routineId);
+              if (mounted) {
+                ref
+                    .read(routinesViewModelProvider.notifier)
+                    .removeHabitFromRoutine(
+                      routineId: routineId,
+                      habitId: widget.habit.id,
+                    );
+              }
             },
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
             child: const Text('Remove'),
           ),
         ],
       ),
-    );
-  }
-
-  void _performRemove(BuildContext context, String routineId) {
-    final ref = ProviderScope.containerOf(context);
-    ref.read(routinesViewModelProvider.notifier).removeHabitFromRoutine(
-      routineId: routineId,
-      habitId: habit.id,
     );
   }
 }

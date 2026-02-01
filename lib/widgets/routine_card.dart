@@ -81,9 +81,10 @@ class _RoutineCardState extends State<RoutineCard> {
                       color: Theme.of(context).colorScheme.surface,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.outline.withOpacity(0.2),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .outline
+                            .withOpacity(0.2),
                       ),
                     ),
                     child: Column(
@@ -146,7 +147,6 @@ class _RoutineCardState extends State<RoutineCard> {
 
         return DragTarget<String>(
           onAccept: (habitId) {
-            // Use transfer method instead of add method
             ref
                 .read(routinesViewModelProvider.notifier)
                 .transferHabitToRoutine(
@@ -155,16 +155,13 @@ class _RoutineCardState extends State<RoutineCard> {
                 );
             setState(() => _isDragOver = false);
           },
-         onWillAcceptWithDetails: (data) {
-  // Check if habit is already in this routine
-  // ignore: unrelated_type_equality_checks
-  final isAlreadyInRoutine = widget.habits.any((h) => h.id == data);
-  // Also check if we're trying to drop on the same routine it came from
-  final state = ref.read(routinesViewModelProvider);
-  final isSameRoutine = state.sourceRoutineId == widget.routine.id;
-  
-  return !isAlreadyInRoutine && !isSameRoutine;
-},
+          onWillAcceptWithDetails: (data) {
+            // ignore: unrelated_type_equality_checks
+            final isAlreadyInRoutine = widget.habits.any((h) => h.id == data);
+            final state = ref.read(routinesViewModelProvider);
+            final isSameRoutine = state.sourceRoutineId == widget.routine.id;
+            return !isAlreadyInRoutine && !isSameRoutine;
+          },
           onLeave: (data) {
             setState(() => _isDragOver = false);
             ref
@@ -187,9 +184,8 @@ class _RoutineCardState extends State<RoutineCard> {
                       ? theme.colorScheme.primaryContainer.withOpacity(0.3)
                       : widget.routine.active
                       ? theme.colorScheme.surface
-                      : theme.colorScheme.surfaceContainerHighest.withOpacity(
-                          0.3,
-                        ),
+                      : theme.colorScheme.surfaceContainerHighest
+                          .withOpacity(0.3),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: _isDragOver || isDragTarget
@@ -210,134 +206,179 @@ class _RoutineCardState extends State<RoutineCard> {
                 child: Opacity(
                   opacity: widget.routine.active ? 1.0 : 0.75,
                   child: Padding(
-                    padding: const EdgeInsets.all(24.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Header with title and menu button
-                        Row(
+                    padding: const EdgeInsets.all(16.0),
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        // Everything inside the card scales off this single
+                        // width measurement.  A half-screen card on a 360px
+                        // phone lands around 148-164px here after the outer
+                        // padding and the 16px gap in the two-column Row.
+                        final bool isNarrow = constraints.maxWidth < 180;
+
+                        // --- title ---
+                        final titleStyle = (isNarrow
+                                ? theme.textTheme.titleMedium
+                                : theme.textTheme.titleLarge)
+                            ?.copyWith(fontWeight: FontWeight.bold);
+
+                        // --- description ---
+                        final descStyle = (isNarrow
+                                ? theme.textTheme.bodySmall
+                                : theme.textTheme.bodyMedium)
+                            ?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                          height: 1.4,
+                        );
+
+                        // --- spacing ---
+                        final double smallGap = isNarrow ? 6.0 : 10.0;
+                        final double sectionGap = isNarrow ? 10.0 : 14.0;
+
+                        // --- drop zone ---
+                        final double dropZoneHeight = isNarrow ? 80.0 : 110.0;
+                        final double dropIconSize = isNarrow ? 28.0 : 36.0;
+
+                        return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    widget.routine.name,
-                                    style: theme.textTheme.headlineSmall
-                                        ?.copyWith(fontWeight: FontWeight.bold),
+                            // ── Header row: title column + menu button ──
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      // Title — 2 lines max, ellipsis after
+                                      Text(
+                                        widget.routine.name,
+                                        style: titleStyle,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      SizedBox(height: smallGap),
+                                      // Routine type label
+                                      Text(
+                                        _getRoutineTypeDisplay(),
+                                        style: theme.textTheme.bodySmall
+                                            ?.copyWith(
+                                          color: theme
+                                              .colorScheme.onSurfaceVariant,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      SizedBox(height: smallGap),
+                                      // Active / Inactive toggle
+                                      _ActiveToggle(
+                                        isActive: widget.routine.active,
+                                        onToggle: widget.onToggleActive,
+                                        compact: isNarrow,
+                                      ),
+                                    ],
                                   ),
-                                  const SizedBox(height: 12),
-                                  Text(
-                                    _getRoutineTypeDisplay(),
-                                    style: theme.textTheme.bodyMedium,
-                                  ),
-                                  const SizedBox(height: 12),
-                                  // Active/Inactive Toggle
-                                  _ActiveToggle(
-                                    isActive: widget.routine.active,
-                                    onToggle: widget.onToggleActive,
-                                  ),
-                                ],
-                              ),
+                                ),
+                                // Three-dot menu — smaller on narrow
+                                IconButton(
+                                  onPressed: _toggleMenu,
+                                  icon: Icon(Icons.more_vert,
+                                      size: isNarrow ? 18 : 24),
+                                  iconSize: isNarrow ? 18 : 24,
+                                  padding: isNarrow
+                                      ? const EdgeInsets.all(4)
+                                      : null,
+                                  constraints: isNarrow
+                                      ? const BoxConstraints(
+                                          minWidth: 28, minHeight: 28)
+                                      : null,
+                                  tooltip: 'More options',
+                                ),
+                              ],
                             ),
-                            // Three-dot menu button
-                            IconButton(
-                              onPressed: _toggleMenu,
-                              icon: const Icon(Icons.more_vert),
-                              tooltip: 'More options',
-                            ),
-                          ],
-                        ),
 
-                        const SizedBox(height: 16),
+                            SizedBox(height: sectionGap),
 
-                        // Description
-                        if (widget.routine.description?.isNotEmpty == true)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 16),
-                            child: Text(
-                              widget.routine.description ?? '',
-                              style: theme.textTheme.bodyLarge?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
-                                height: 1.5,
-                              ),
-                            ),
-                          ),
-
-                        // Habits Section
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Habits (${widget.habits.length})',
-                                style: theme.textTheme.labelLarge?.copyWith(
-                                  fontWeight: FontWeight.w600,
+                            // ── Description ──
+                            if (widget.routine.description?.isNotEmpty == true)
+                              Padding(
+                                padding: EdgeInsets.only(bottom: sectionGap),
+                                child: Text(
+                                  widget.routine.description ?? '',
+                                  style: descStyle,
+                                  // Fewer lines on narrow so the card
+                                  // stays compact; still readable.
+                                  maxLines: isNarrow ? 2 : 3,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
-                              const SizedBox(height: 8),
 
-                              if (widget.habits.isEmpty)
-                                Expanded(
-                                  child: Center(
-                                    child: Container(
-                                      padding: const EdgeInsets.all(20),
-                                      decoration: BoxDecoration(
-                                        color: theme
-                                            .colorScheme
-                                            .surfaceContainerHighest
-                                            .withOpacity(0.3),
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(
-                                          color: theme.colorScheme.outline
-                                              .withOpacity(0.1),
-                                          // Use a different visual cue instead of dashed border
-                                        ),
+                            // ── Habits section ──
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'Habits (${widget.habits.length})',
+                                  style: (isNarrow
+                                          ? theme.textTheme.bodySmall
+                                          : theme.textTheme.labelLarge)
+                                      ?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                SizedBox(height: smallGap),
+                                if (widget.habits.isEmpty)
+                                  // Empty drop zone — height and icon scale
+                                  Container(
+                                    height: dropZoneHeight,
+                                    decoration: BoxDecoration(
+                                      color: theme.colorScheme
+                                          .surfaceContainerHighest
+                                          .withOpacity(0.3),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: theme.colorScheme.outline
+                                            .withOpacity(0.1),
                                       ),
+                                    ),
+                                    child: Center(
                                       child: Column(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           Icon(
                                             Icons.drag_indicator,
-                                            size: 40,
+                                            size: dropIconSize,
                                             color: theme
-                                                .colorScheme
-                                                .onSurfaceVariant,
+                                                .colorScheme.onSurfaceVariant,
                                           ),
-                                          const SizedBox(height: 8),
+                                          SizedBox(
+                                              height: isNarrow ? 4.0 : 6.0),
                                           Text(
                                             'Drag habits here',
-                                            style: theme.textTheme.bodyMedium
+                                            style: (isNarrow
+                                                    ? theme.textTheme.bodySmall
+                                                    : theme
+                                                        .textTheme.bodyMedium)
                                                 ?.copyWith(
-                                                  color: theme
-                                                      .colorScheme
-                                                      .onSurfaceVariant,
-                                                ),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            'Drop zone',
-                                            style: theme.textTheme.bodySmall
-                                                ?.copyWith(
-                                                  color: theme
-                                                      .colorScheme
-                                                      .onSurfaceVariant
-                                                      .withOpacity(0.7),
-                                                ),
+                                              color: theme
+                                                  .colorScheme.onSurfaceVariant,
+                                            ),
                                           ),
                                         ],
                                       ),
                                     ),
-                                  ),
-                                )
-                              else
-                                Expanded(
-                                  child: ListView.separated(
+                                  )
+                                else
+                                  ListView.separated(
                                     shrinkWrap: true,
+                                    physics:
+                                        const NeverScrollableScrollPhysics(),
                                     itemCount: widget.habits.length,
                                     separatorBuilder: (context, index) =>
-                                        const SizedBox(height: 8),
+                                        const SizedBox(height: 4),
                                     itemBuilder: (context, index) {
                                       final habit = widget.habits[index];
                                       return DragDropHabitItem(
@@ -347,11 +388,11 @@ class _RoutineCardState extends State<RoutineCard> {
                                       );
                                     },
                                   ),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ],
+                              ],
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   ),
                 ),
@@ -364,35 +405,50 @@ class _RoutineCardState extends State<RoutineCard> {
   }
 }
 
+// ---------------------------------------------------------------------------
+// _ActiveToggle
+// ---------------------------------------------------------------------------
 class _ActiveToggle extends StatelessWidget {
   final bool isActive;
   final VoidCallback onToggle;
+  // When compact is true the track and knob shrink and the label text drops
+  // to bodySmall so the toggle fits comfortably on narrow cards.
+  final bool compact;
 
-  const _ActiveToggle({required this.isActive, required this.onToggle});
+  const _ActiveToggle({
+    required this.isActive,
+    required this.onToggle,
+    this.compact = false,
+  });
 
   @override
   Widget build(BuildContext context) {
+    // Track dimensions
+    final double trackW = compact ? 36.0 : 44.0;
+    final double trackH = compact ? 20.0 : 24.0;
+    final double knobD = compact ? 13.0 : 16.0;
+    final double knobMargin = compact ? 3.0 : 4.0;
+
     return GestureDetector(
       onTap: onToggle,
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 44,
-            height: 24,
+            width: trackW,
+            height: trackH,
             decoration: BoxDecoration(
               color: isActive ? Colors.green : Colors.grey.shade300,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(trackH / 2),
             ),
             child: AnimatedAlign(
               duration: const Duration(milliseconds: 200),
-              alignment: isActive
-                  ? Alignment.centerRight
-                  : Alignment.centerLeft,
+              alignment:
+                  isActive ? Alignment.centerRight : Alignment.centerLeft,
               child: Container(
-                width: 16,
-                height: 16,
-                margin: const EdgeInsets.symmetric(horizontal: 4),
+                width: knobD,
+                height: knobD,
+                margin: EdgeInsets.symmetric(horizontal: knobMargin),
                 decoration: const BoxDecoration(
                   color: Colors.white,
                   shape: BoxShape.circle,
@@ -407,13 +463,14 @@ class _ActiveToggle extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 6),
           Text(
             isActive ? 'Active' : 'Inactive',
             style: TextStyle(
-              fontSize: 14,
+              fontSize: compact ? 11 : 13,
               fontWeight: FontWeight.w500,
-              color: isActive ? Colors.green.shade700 : Colors.grey.shade600,
+              color:
+                  isActive ? Colors.green.shade700 : Colors.grey.shade600,
             ),
           ),
         ],
@@ -422,6 +479,9 @@ class _ActiveToggle extends StatelessWidget {
   }
 }
 
+// ---------------------------------------------------------------------------
+// _MenuButton
+// ---------------------------------------------------------------------------
 class _MenuButton extends StatefulWidget {
   final String icon;
   final String label;
@@ -458,8 +518,8 @@ class _MenuButtonState extends State<_MenuButton> {
           decoration: BoxDecoration(
             color: _isHovered
                 ? (widget.isDestructive
-                      ? Colors.red.shade50
-                      : theme.colorScheme.surfaceContainerHighest)
+                    ? Colors.red.shade50
+                    : theme.colorScheme.surfaceContainerHighest)
                 : Colors.transparent,
             borderRadius: widget.isLast
                 ? const BorderRadius.only(

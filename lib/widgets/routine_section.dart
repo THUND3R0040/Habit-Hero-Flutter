@@ -21,6 +21,9 @@ class RoutineSection extends StatelessWidget {
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      // KEY FIX: mainAxisSize.min so the Column only takes what it needs
+      // and doesn't try to expand beyond its parent's bounds
+      mainAxisSize: MainAxisSize.min,
       children: [
         if (routine != null)
           Padding(
@@ -32,13 +35,23 @@ class RoutineSection extends StatelessWidget {
                   ),
             ),
           ),
-        ...habits.map((todayHabit) => TodayHabitItem(
+        // KEY FIX: wrap the habit list in a ListView so if there are
+        // many habits they scroll instead of overflowing, and use
+        // shrinkWrap + physics to let it sit inside the parent Column
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: habits.length,
+          itemBuilder: (context, index) {
+            final todayHabit = habits[index];
+            return TodayHabitItem(
               habit: todayHabit.habit,
               completed: todayHabit.completed,
               onToggle: () => onToggleHabit(todayHabit.habit.id),
-            )),
+            );
+          },
+        ),
       ],
     );
   }
 }
-
