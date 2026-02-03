@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'views/main_navigation.dart';
 import 'views/auth_screen.dart';
 import 'services/supabase_providers.dart';
@@ -11,16 +12,16 @@ void main() async {
   await dotenv.load(fileName: ".env");
 
   WidgetsFlutterBinding.ensureInitialized();
-
+  final sharedPrefs = await SharedPreferences.getInstance();
   // Initialize Supabase
-  // TODO: Replace with your Supabase URL and anon key
   await Supabase.initialize(
     url: dotenv.env['SUPABASE_URL']!,
     anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
   );
 
   runApp(
-    const ProviderScope(
+    ProviderScope(
+      overrides: [sharedPreferencesProvider.overrideWithValue(sharedPrefs)],
       child: HabitTrackerApp(),
     ),
   );
@@ -32,7 +33,7 @@ class HabitTrackerApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(themeProvider);
-    final themeNotifier = ref.read(themeProvider.notifier);
+    final themeNotifier = ref.watch(themeProvider.notifier);
 
     return MaterialApp(
       title: 'Habit Tracker',
@@ -83,9 +84,8 @@ class AuthWrapper extends ConsumerWidget {
         }
         return const MainNavigation();
       },
-      loading: () => const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      ),
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (error, stack) => Scaffold(
         body: Center(
           child: Column(

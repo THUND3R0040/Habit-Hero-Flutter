@@ -21,11 +21,7 @@ class HabitCompletion {
 
   Map<String, dynamic> toJson() => _$HabitCompletionToJson(this);
 
-  HabitCompletion copyWith({
-    String? habitId,
-    DateTime? date,
-    bool? completed,
-  }) {
+  HabitCompletion copyWith({String? habitId, DateTime? date, bool? completed}) {
     return HabitCompletion(
       habitId: habitId ?? this.habitId,
       date: date ?? this.date,
@@ -40,8 +36,8 @@ class HabitCompletion {
     return DateTime.now();
   }
 
+  // Serialize DateTime to 'YYYY-MM-DD' format
   static String _dateToJson(DateTime date) {
     return date.toIso8601String().split('T')[0];
   }
 }
-

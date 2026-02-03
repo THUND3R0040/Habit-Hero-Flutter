@@ -53,6 +53,9 @@ dependencies:
   # Table Calendar
   table_calendar: ^3.0.9
 
+  # Shared Preferences
+  shared_preferences: ^2.1.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
