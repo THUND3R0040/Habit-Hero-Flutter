@@ -48,10 +48,13 @@ class CalendarState {
     DayDetails? selectedDayDetails,
     bool? isLoading,
     String? error,
+    bool clearSelectedDay = false,
   }) {
     return CalendarState(
       dayCompletions: dayCompletions ?? this.dayCompletions,
-      selectedDayDetails: selectedDayDetails ?? this.selectedDayDetails,
+      selectedDayDetails: clearSelectedDay
+          ? null
+          : (selectedDayDetails ?? this.selectedDayDetails),
       isLoading: isLoading ?? this.isLoading,
       error: error ?? this.error,
     );
@@ -62,13 +65,8 @@ class CalendarViewModel extends StateNotifier<CalendarState> {
   final HabitService _habitService;
   final CompletionService _completionService;
 
-  CalendarViewModel(
-    this._habitService,
-    this._completionService,
-  ) : super(CalendarState(
-          dayCompletions: {},
-          isLoading: true,
-        )) {
+  CalendarViewModel(this._habitService, this._completionService)
+    : super(CalendarState(dayCompletions: {}, isLoading: true)) {
     loadCalendarData();
   }
 
@@ -104,8 +102,9 @@ class CalendarViewModel extends StateNotifier<CalendarState> {
           }
         }
 
-        final completionRate =
-            totalCount > 0 ? completedCount / totalCount : 0.0;
+        final completionRate = totalCount > 0
+            ? completedCount / totalCount
+            : 0.0;
 
         dayCompletionsMap[dateStr] = DayCompletion(
           date: date,
@@ -120,10 +119,7 @@ class CalendarViewModel extends StateNotifier<CalendarState> {
         isLoading: false,
       );
     } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: e.toString(),
-      );
+      state = state.copyWith(isLoading: false, error: e.toString());
     }
   }
 
@@ -162,15 +158,14 @@ class CalendarViewModel extends StateNotifier<CalendarState> {
   }
 
   void clearSelectedDay() {
-    state = state.copyWith(selectedDayDetails: null);
+    state = state.copyWith(clearSelectedDay: true);
   }
 }
 
 final calendarViewModelProvider =
     StateNotifierProvider<CalendarViewModel, CalendarState>((ref) {
-  return CalendarViewModel(
-    ref.watch(habitServiceProvider),
-    ref.watch(completionServiceProvider),
-  );
-});
-
+      return CalendarViewModel(
+        ref.watch(habitServiceProvider),
+        ref.watch(completionServiceProvider),
+      );
+    });

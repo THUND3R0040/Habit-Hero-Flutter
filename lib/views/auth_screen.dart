@@ -28,8 +28,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
   @override
   void initState() {
     super.initState();
-    _fadeController =
-        AnimationController(vsync: this, duration: const Duration(milliseconds: 800));
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
     _fadeAnimation = CurvedAnimation(
       parent: _fadeController,
       curve: Curves.easeOut,
@@ -189,8 +191,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                                 ? Icons.visibility_outlined
                                 : Icons.visibility_off_outlined,
                           ),
-                          onPressed: () =>
-                              setState(() => _obscurePassword = !_obscurePassword),
+                          onPressed: () => setState(
+                            () => _obscurePassword = !_obscurePassword,
+                          ),
                         ),
                         validator: (v) {
                           if (v == null || v.length < 6) {
@@ -272,7 +275,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                             },
                             child: Text(
                               _isSignUp ? 'Sign In' : 'Sign Up',
-                              style: const TextStyle(fontWeight: FontWeight.bold),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                         ],
@@ -289,10 +294,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
   }
 
   Widget _label(String text) {
-    return Text(
-      text,
-      style: const TextStyle(fontWeight: FontWeight.w600),
-    );
+    return Text(text, style: const TextStyle(fontWeight: FontWeight.w600));
   }
 
   Widget _inputField({
@@ -313,9 +315,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
         suffixIcon: suffix,
         filled: true,
         fillColor: Colors.grey.shade100,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: const BorderSide(color: Colors.green, width: 2),
