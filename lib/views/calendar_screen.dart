@@ -16,9 +16,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
   Color _getCompletionColor(int completedCount, int totalCount) {
     if (totalCount == 0) return Colors.transparent;
-    
+
     final rate = completedCount / totalCount;
-    
+
     // Strong green for high completion (8+ tasks or 80%+)
     if (completedCount >= 8 || rate >= 0.8) {
       return Colors.green.withOpacity(0.7);
@@ -41,9 +41,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     final viewModel = ref.read(calendarViewModelProvider.notifier);
 
     if (state.isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     if (state.error != null) {
@@ -117,12 +115,13 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
               defaultBuilder: (context, date, focused) {
                 final dateStr = date.toIso8601String().split('T')[0];
                 final completion = state.dayCompletions[dateStr];
-                final isSelected = date.year == _selectedDay.year &&
+                final isSelected =
+                    date.year == _selectedDay.year &&
                     date.month == _selectedDay.month &&
                     date.day == _selectedDay.day;
-                
-                if (completion != null && 
-                    !date.isAfter(DateTime.now()) && 
+
+                if (completion != null &&
+                    !date.isAfter(DateTime.now()) &&
                     completion.completedCount > 0 &&
                     !isSelected) {
                   return Container(
@@ -150,15 +149,16 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
               todayBuilder: (context, date, focused) {
                 final dateStr = date.toIso8601String().split('T')[0];
                 final completion = state.dayCompletions[dateStr];
-                final isSelected = date.year == _selectedDay.year &&
+                final isSelected =
+                    date.year == _selectedDay.year &&
                     date.month == _selectedDay.month &&
                     date.day == _selectedDay.day;
-                
+
                 Color backgroundColor;
                 if (isSelected) {
                   backgroundColor = Colors.blue;
-                } else if (completion != null && 
-                    !date.isAfter(DateTime.now()) && 
+                } else if (completion != null &&
+                    !date.isAfter(DateTime.now()) &&
                     completion.completedCount > 0) {
                   backgroundColor = _getCompletionColor(
                     completion.completedCount,
@@ -167,7 +167,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 } else {
                   backgroundColor = Colors.blue.withOpacity(0.5);
                 }
-                
+
                 return Container(
                   margin: const EdgeInsets.all(2),
                   decoration: BoxDecoration(
@@ -242,53 +242,58 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                         ],
                       ),
                     ),
-                    if (state.selectedDayDetails!.completedHabits.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                        child: Text(
-                          'Completed (${state.selectedDayDetails!.completedHabits.length})',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                color: Colors.green,
-                              ),
-                        ),
-                      ),
                     Expanded(
-                      child: ListView.builder(
-                        itemCount:
-                            state.selectedDayDetails!.completedHabits.length,
-                        itemBuilder: (context, index) {
-                          final habit =
-                              state.selectedDayDetails!.completedHabits[index];
-                          return ListTile(
-                            leading: const Icon(Icons.check_circle,
-                                color: Colors.green),
-                            title: Text(habit.name),
-                          );
-                        },
-                      ),
-                    ),
-                    if (state.selectedDayDetails!.missedHabits.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                        child: Text(
-                          'Missed (${state.selectedDayDetails!.missedHabits.length})',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                color: Colors.red,
+                      child: ListView(
+                        children: [
+                          if (state
+                              .selectedDayDetails!
+                              .completedHabits
+                              .isNotEmpty) ...[
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                              child: Text(
+                                'Completed (${state.selectedDayDetails!.completedHabits.length})',
+                                style: Theme.of(context).textTheme.titleMedium
+                                    ?.copyWith(color: Colors.green),
                               ),
-                        ),
-                      ),
-                    Expanded(
-                      child: ListView.builder(
-                        itemCount:
-                            state.selectedDayDetails!.missedHabits.length,
-                        itemBuilder: (context, index) {
-                          final habit =
-                              state.selectedDayDetails!.missedHabits[index];
-                          return ListTile(
-                            leading: const Icon(Icons.cancel, color: Colors.red),
-                            title: Text(habit.name),
-                          );
-                        },
+                            ),
+                            ...state.selectedDayDetails!.completedHabits.map((
+                              habit,
+                            ) {
+                              return ListTile(
+                                leading: const Icon(
+                                  Icons.check_circle,
+                                  color: Colors.green,
+                                ),
+                                title: Text(habit.name),
+                              );
+                            }),
+                          ],
+                          if (state
+                              .selectedDayDetails!
+                              .missedHabits
+                              .isNotEmpty) ...[
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                              child: Text(
+                                'Missed (${state.selectedDayDetails!.missedHabits.length})',
+                                style: Theme.of(context).textTheme.titleMedium
+                                    ?.copyWith(color: Colors.red),
+                              ),
+                            ),
+                            ...state.selectedDayDetails!.missedHabits.map((
+                              habit,
+                            ) {
+                              return ListTile(
+                                leading: const Icon(
+                                  Icons.cancel,
+                                  color: Colors.red,
+                                ),
+                                title: Text(habit.name),
+                              );
+                            }),
+                          ],
+                        ],
                       ),
                     ),
                   ],
@@ -300,4 +305,3 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     );
   }
 }
-
