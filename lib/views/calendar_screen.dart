@@ -242,58 +242,57 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                         ],
                       ),
                     ),
+                    if (state.selectedDayDetails!.completedHabits.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                        child: Text(
+                          'Completed (${state.selectedDayDetails!.completedHabits.length})',
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(color: Colors.green),
+                        ),
+                      ),
                     Expanded(
-                      child: ListView(
-                        children: [
-                          if (state
-                              .selectedDayDetails!
-                              .completedHabits
-                              .isNotEmpty) ...[
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                              child: Text(
-                                'Completed (${state.selectedDayDetails!.completedHabits.length})',
-                                style: Theme.of(context).textTheme.titleMedium
-                                    ?.copyWith(color: Colors.green),
-                              ),
+                      child: ListView.builder(
+                        itemCount:
+                            state.selectedDayDetails!.completedHabits.length,
+                        itemBuilder: (context, index) {
+                          final habit =
+                              state.selectedDayDetails!.completedHabits[index];
+                          return ListTile(
+                            leading: const Icon(
+                              Icons.check_circle,
+                              color: Colors.green,
                             ),
-                            ...state.selectedDayDetails!.completedHabits.map((
-                              habit,
-                            ) {
-                              return ListTile(
-                                leading: const Icon(
-                                  Icons.check_circle,
-                                  color: Colors.green,
-                                ),
-                                title: Text(habit.name),
-                              );
-                            }),
-                          ],
-                          if (state
-                              .selectedDayDetails!
-                              .missedHabits
-                              .isNotEmpty) ...[
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                              child: Text(
-                                'Missed (${state.selectedDayDetails!.missedHabits.length})',
-                                style: Theme.of(context).textTheme.titleMedium
-                                    ?.copyWith(color: Colors.red),
-                              ),
+                            title: Text(habit.name),
+                          );
+                        },
+                      ),
+                    ),
+                    if (state.selectedDayDetails!.missedHabits.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                        child: Text(
+                          'Missed (${state.selectedDayDetails!.missedHabits.length})',
+                          style: Theme.of(
+                            context,
+                          ).textTheme.titleMedium?.copyWith(color: Colors.red),
+                        ),
+                      ),
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount:
+                            state.selectedDayDetails!.missedHabits.length,
+                        itemBuilder: (context, index) {
+                          final habit =
+                              state.selectedDayDetails!.missedHabits[index];
+                          return ListTile(
+                            leading: const Icon(
+                              Icons.cancel,
+                              color: Colors.red,
                             ),
-                            ...state.selectedDayDetails!.missedHabits.map((
-                              habit,
-                            ) {
-                              return ListTile(
-                                leading: const Icon(
-                                  Icons.cancel,
-                                  color: Colors.red,
-                                ),
-                                title: Text(habit.name),
-                              );
-                            }),
-                          ],
-                        ],
+                            title: Text(habit.name),
+                          );
+                        },
                       ),
                     ),
                   ],

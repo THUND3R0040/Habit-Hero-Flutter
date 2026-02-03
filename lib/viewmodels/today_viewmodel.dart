@@ -11,11 +11,7 @@ class TodayHabit {
   final bool completed;
   final Routine? routine;
 
-  TodayHabit({
-    required this.habit,
-    required this.completed,
-    this.routine,
-  });
+  TodayHabit({required this.habit, required this.completed, this.routine});
 }
 
 class TodayState {
@@ -59,12 +55,14 @@ class TodayViewModel extends StateNotifier<TodayState> {
     this._habitService,
     this._routineService,
     this._completionService,
-  ) : super(TodayState(
+  ) : super(
+        TodayState(
           habits: [],
           isLoading: true,
           completedCount: 0,
           totalCount: 0,
-        )) {
+        ),
+      ) {
     loadTodayHabits();
   }
 
@@ -78,7 +76,9 @@ class TodayViewModel extends StateNotifier<TodayState> {
       final habits = await _habitService.getHabits();
       final routines = await _routineService.getRoutines();
       final activeRoutines = routines.where((r) => r.active).toList();
-      final completions = await _completionService.getCompletionsForDate(startOfDay);
+      final completions = await _completionService.getCompletionsForDate(
+        startOfDay,
+      );
 
       final completionMap = <String, bool>{};
       for (final completion in completions) {
@@ -87,9 +87,12 @@ class TodayViewModel extends StateNotifier<TodayState> {
 
       final routineHabitsMap = <String, List<String>>{};
       for (final routine in activeRoutines) {
-        final routineHabits = await _routineService.getRoutineHabits(routine.id);
-        routineHabitsMap[routine.id] =
-            routineHabits.map((rh) => rh.habitId).toList();
+        final routineHabits = await _routineService.getRoutineHabits(
+          routine.id,
+        );
+        routineHabitsMap[routine.id] = routineHabits
+            .map((rh) => rh.habitId)
+            .toList();
       }
 
       final habitRoutineMap = <String, Routine>{};
@@ -103,11 +106,7 @@ class TodayViewModel extends StateNotifier<TodayState> {
       final todayHabits = habits.map((habit) {
         final completed = completionMap[habit.id] ?? false;
         final routine = habitRoutineMap[habit.id];
-        return TodayHabit(
-          habit: habit,
-          completed: completed,
-          routine: routine,
-        );
+        return TodayHabit(habit: habit, completed: completed, routine: routine);
       }).toList();
 
       final completedCount = todayHabits.where((h) => h.completed).length;
@@ -120,10 +119,7 @@ class TodayViewModel extends StateNotifier<TodayState> {
         totalCount: totalCount,
       );
     } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: e.toString(),
-      );
+      state = state.copyWith(isLoading: false, error: e.toString());
     }
   }
 
@@ -132,8 +128,10 @@ class TodayViewModel extends StateNotifier<TodayState> {
       final today = DateTime.now();
       final startOfDay = DateTime(today.year, today.month, today.day);
 
-      final currentCompletion =
-          await _completionService.getCompletion(habitId: habitId, date: startOfDay);
+      final currentCompletion = await _completionService.getCompletion(
+        habitId: habitId,
+        date: startOfDay,
+      );
       final newCompleted = !(currentCompletion?.completed ?? false);
 
       await _completionService.toggleCompletion(
@@ -142,7 +140,24 @@ class TodayViewModel extends StateNotifier<TodayState> {
         completed: newCompleted,
       );
 
-      await loadTodayHabits();
+      // Update state locally without showing loading spinner
+      final updatedHabits = state.habits.map((todayHabit) {
+        if (todayHabit.habit.id == habitId) {
+          return TodayHabit(
+            habit: todayHabit.habit,
+            completed: newCompleted,
+            routine: todayHabit.routine,
+          );
+        }
+        return todayHabit;
+      }).toList();
+
+      final completedCount = updatedHabits.where((h) => h.completed).length;
+
+      state = state.copyWith(
+        habits: updatedHabits,
+        completedCount: completedCount,
+      );
     } catch (e) {
       state = state.copyWith(error: e.toString());
     }
@@ -170,10 +185,9 @@ class TodayViewModel extends StateNotifier<TodayState> {
 
 final todayViewModelProvider =
     StateNotifierProvider<TodayViewModel, TodayState>((ref) {
-  return TodayViewModel(
-    ref.watch(habitServiceProvider),
-    ref.watch(routineServiceProvider),
-    ref.watch(completionServiceProvider),
-  );
-});
-
+      return TodayViewModel(
+        ref.watch(habitServiceProvider),
+        ref.watch(routineServiceProvider),
+        ref.watch(completionServiceProvider),
+      );
+    });
